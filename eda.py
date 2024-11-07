@@ -3,13 +3,13 @@
 import os
 
 path = "D:\Studia\semestr7\inźynierka\Market-analysis"
+# path = "C:\Studia\Market-analysis"
 os.chdir(path)
 
 #%% loading data
 
 import numpy as np
 import pandas as pd
-
 
 def load_data(directory_name, suffix=""):
     df = None
@@ -56,11 +56,42 @@ for col in float_columns:
 
 df.info()
 
+#%%
+
+# TODO drop Adj Close
+
 #%% removing duplicates
 
 subset = list(filter(lambda x: x != 'Freq', df.columns))
 df.drop_duplicates(subset=subset, inplace=True)
 df = df.reset_index(drop=True)
+
+#%% represent all prices in dollars
+
+# TODO change labels to one pattern: EURUSD, USDJPY ???
+
+# problem with EURGBP
+df.loc[df.Name == "EURGBP=X", "Open"]
+
+# counting GBPUSD
+eurusd_df = df[df.Name == "EURUSD=X"][["Date"] + float_columns]
+eurgbp_df = df[df.Name == "EURGBP=X"][["Date", "Volume", "Freq"] + float_columns]
+# TODO Volume is 0!!!
+merged_df = pd.merge(eurusd_df, eurgbp_df, on="Date", how="inner")
+
+for col in float_columns:
+    merged_df[col] = merged_df[col+"_x"] / merged_df[col+"_y"]
+
+merged_df["Name"] = "GBPUSD=X"
+
+merged_df = merged_df[df.columns]
+
+df = pd.concat([df, merged_df], ignore_index=True)
+
+# remove EURGBP
+df = df[~(df.Name == "EURGBP=X")]
+df = df.reset_index(drop=True)
+
 
 #%% time handling
 
@@ -135,12 +166,27 @@ sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', square=True)
 plt.title('Covariance Matrix Heatmap')
 plt.show()
 
+# detect high correlated columns
+threshold1 = 0.4
+threshold2 = 0.95
+
+res = corr_matrix\
+    .where(lambda x: (abs(x) > threshold1) & (abs(x) < threshold2))\
+    .stack().reset_index()\
+    .rename(columns={'level_0': 'Feature1', 'level_1': 'Feature2', 0: 'Correlation'})
+res.loc[res.Feature1 != res.Feature2]
+
+# TODO check correlation with Close feature
+
+
 #%% histograms
 
 df_train.hist(bins=50, figsize=(10, 8))
 plt.suptitle('Histograms of DataFrame Columns')
 plt.tight_layout()
 plt.show()
+
+# it is better to show separate histograms for evry index
 
 #%% full boxplots
 
@@ -174,6 +220,7 @@ df_train.describe()
 #%% outliers
 
 # TODO
+# apply separately for every index
 
 def get_quantiles(df, cols_to_modify):
     quantiles = []
@@ -198,10 +245,10 @@ def modify_outliers(df, cols_to_modify, quantiles):
 
 #%% normalisation
 
-
+# ???
 
 #%%
 
 # outliers
 # additional columns
-# pca (high correlation)
+# pca (high correlation) ?
