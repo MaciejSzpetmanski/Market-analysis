@@ -2,8 +2,8 @@
 
 import os
 
-path = "D:\Studia\semestr7\inźynierka\Market-analysis"
-# path = "C:\Studia\Market-analysis"
+# path = "D:\Studia\semestr7\inźynierka\Market-analysis"
+path = "C:\Studia\Market-analysis"
 os.chdir(path)
 
 #%% loading data
@@ -42,6 +42,10 @@ df.shape
 df.head()
 df.columns
 
+#%% dropping Adj Close
+
+df = df.drop(columns=["Adj Close"])
+
 #%% converting column types
 
 df.describe()
@@ -50,15 +54,11 @@ df.info()
 df['Volume']
 df['Volume'] = df['Volume'].astype('int64')
 
-float_columns = ['Adj Close', 'Close', 'High', 'Low', 'Open']
+float_columns = ['Close', 'High', 'Low', 'Open'] #'Adj Close'
 for col in float_columns:
     df[col] = df[col].astype('float')
 
 df.info()
-
-#%%
-
-# TODO drop Adj Close
 
 #%% removing duplicates
 
@@ -92,7 +92,6 @@ df = pd.concat([df, merged_df], ignore_index=True)
 df = df[~(df.Name == "EURGBP=X")]
 df = df.reset_index(drop=True)
 
-
 #%% time handling
 
 from feature_engine.datetime import DatetimeFeatures
@@ -120,13 +119,35 @@ df['Date'] = date
 
 df.info()
 
+#%% identify useless columns (it may differ based on basic frequency)
+
 # TODO identify useless columns
 
+
+for col in df.columns:
+    print(f"{col}: {len(df[col].unique())}")
+    
+df.Date_second
+df.Date_minute
+df.Date_hour
+df.Date_leap_year
+df.Date_year_end.value_counts()
+df.Date_weekend.value_counts() # there is some data from weekend
+df[df.Date_weekend == 1]["Name"] # crypto
+
+cols_to_remove = ["Freq", "Date_hour", "Date_minute", "Date_second"] # Freq, if only one frequency is used
+# possibly remove these columns earlier
+df = df.drop(columns=cols_to_remove)
+
 #%% name encoding (one-hot)
+
+name_column = df["Name"]
 
 df = pd.get_dummies(df, columns=['Name'], prefix='Name',  dtype=int)
 df.shape
 df.columns
+
+df["Name"] = name_column
 
 #%% creating new columns
 
@@ -142,10 +163,14 @@ split_date = last_date - pd.DateOffset(years=1)
 df_train = df[df['Date'] <= split_date]
 df_train.shape
 
-# TODO stratify by day-month-year
-df_val, df_test = train_test_split(df[df['Date'] > split_date], test_size=0.6, random_state=42, stratify=df[df['Date'] > split_date]['Date_year'])
+# TODO stratify by date (day-month-year)
+df_val, df_test = train_test_split(df[df['Date'] > split_date], test_size=0.6, random_state=42, stratify=df[df['Date'] > split_date]['Date'])
+
+# TODO add targets
 
 # OPTIONAL hide warnings
+
+# removing Date column
 for data in [df_train, df_val, df_test]:
     data.drop(columns=['Date'], inplace=True)
 
@@ -159,7 +184,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # pearson / spearman / ...
-corr_matrix = df_train.drop(columns=['Freq']).corr()
+# corr_matrix = df_train.drop(columns=['Freq']).corr()
+corr_matrix = df_train.drop(columns=['Name']).corr()
 
 plt.figure(figsize=(8, 6))
 sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', square=True)
@@ -176,17 +202,33 @@ res = corr_matrix\
     .rename(columns={'level_0': 'Feature1', 'level_1': 'Feature2', 0: 'Correlation'})
 res.loc[res.Feature1 != res.Feature2]
 
-# TODO check correlation with Close feature
+#%% check correlation with Close feature
 
+# TODO check again after adding fractal info
+corr_matrix["Close"][abs(corr_matrix["Close"]) > 0.6]
 
 #%% histograms
 
-df_train.hist(bins=50, figsize=(10, 8))
-plt.suptitle('Histograms of DataFrame Columns')
-plt.tight_layout()
+hist_columns = ["Close", "High", "Low", "Open", "Volume", "Timestamp", "Name"]
+grouped = df_train[hist_columns].groupby("Name")
+
+# create a histogram for each group
+for name, group in grouped:
+    group.hist(bins=50, figsize=(10, 8), label=name)
+    plt.suptitle(name, fontsize=16)
+    
+plt.tight_layout()  # Adjust layout to avoid overlap
 plt.show()
 
-# it is better to show separate histograms for evry index
+# TODO save plot to directory
+# Volume between currencies is 0
+
+# df_train.hist(bins=50, figsize=(10, 8))
+# plt.suptitle('Histograms of DataFrame Columns')
+# plt.tight_layout()
+# plt.show()
+
+# it is better to show separate histograms for every index
 
 #%% full boxplots
 
@@ -204,6 +246,8 @@ df_train.describe()
 
 #%% trimmed boxplots
 
+# OPTIONAL
+
 num_columns = df_train.shape[1]
 fig, axes = plt.subplots(1, num_columns, figsize=(15, 6), sharey=False)
 
@@ -219,7 +263,7 @@ df_train.describe()
 
 #%% outliers
 
-# TODO
+# OPTIONAL rather not
 # apply separately for every index
 
 def get_quantiles(df, cols_to_modify):
