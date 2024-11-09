@@ -68,7 +68,7 @@ df = df.reset_index(drop=True)
 
 #%% represent all prices in dollars
 
-# TODO change labels to one pattern: EURUSD, USDJPY ???
+# OPTIONAL change labels to one pattern: EURUSD, USDJPY ???
 
 # problem with EURGBP
 df.loc[df.Name == "EURGBP=X", "Open"]
@@ -76,7 +76,7 @@ df.loc[df.Name == "EURGBP=X", "Open"]
 # counting GBPUSD
 eurusd_df = df[df.Name == "EURUSD=X"][["Date"] + float_columns]
 eurgbp_df = df[df.Name == "EURGBP=X"][["Date", "Volume", "Freq"] + float_columns]
-# TODO Volume is 0!!!
+
 merged_df = pd.merge(eurusd_df, eurgbp_df, on="Date", how="inner")
 
 for col in float_columns:
@@ -114,6 +114,8 @@ dt_features = DatetimeFeatures(
     ]
 )
 
+# "hour", "minute", "second" are not used
+
 df = dt_features.fit_transform(df)
 df['Date'] = date
 
@@ -121,8 +123,7 @@ df.info()
 
 #%% identify useless columns (it may differ based on basic frequency)
 
-# TODO identify useless columns
-
+# TODO identify useless columns - fractals
 
 for col in df.columns:
     print(f"{col}: {len(df[col].unique())}")
@@ -149,10 +150,6 @@ df.columns
 
 df["Name"] = name_column
 
-#%% creating new columns
-
-# TODO
-
 #%% split
 
 from sklearn.model_selection import train_test_split
@@ -163,27 +160,35 @@ split_date = last_date - pd.DateOffset(years=1)
 df_train = df[df['Date'] <= split_date]
 df_train.shape
 
-# TODO stratify by date (day-month-year)
+# stratify by date (day-month-year)
 df_val, df_test = train_test_split(df[df['Date'] > split_date], test_size=0.6, random_state=42, stratify=df[df['Date'] > split_date]['Date'])
 
-# TODO add targets
+# extract targets later
+# y_train = df_train['Close']
+# y_val = df_val['Close']
+# y_test = df_test['Close']
 
-# OPTIONAL hide warnings
+import warnings
 
-# removing Date column
-for data in [df_train, df_val, df_test]:
-    data.drop(columns=['Date'], inplace=True)
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", Warning)
+    # removing Date column
+    for data in [df_train, df_val, df_test]:
+        data.drop(columns=['Date'], inplace=True)
 
 print(f'train: {df_train.shape}')
 print(f'val: {df_val.shape}')
 print(f'test: {df_test.shape}')
 
-#%% correlation
+#%% creating new columns
+
+# TODO fractals
+
+#%% correlation - pearson
 
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# pearson / spearman / ...
 # corr_matrix = df_train.drop(columns=['Freq']).corr()
 corr_matrix = df_train.drop(columns=['Name']).corr()
 
@@ -192,9 +197,9 @@ sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', square=True)
 plt.title('Covariance Matrix Heatmap')
 plt.show()
 
-# detect high correlated columns
-threshold1 = 0.4
-threshold2 = 0.95
+# detect highly correlated columns
+threshold1 = 0.8
+threshold2 = 1
 
 res = corr_matrix\
     .where(lambda x: (abs(x) > threshold1) & (abs(x) < threshold2))\
@@ -202,64 +207,79 @@ res = corr_matrix\
     .rename(columns={'level_0': 'Feature1', 'level_1': 'Feature2', 0: 'Correlation'})
 res.loc[res.Feature1 != res.Feature2]
 
+# date columns have high correlation with each other
+
 #%% check correlation with Close feature
 
 # TODO check again after adding fractal info
 corr_matrix["Close"][abs(corr_matrix["Close"]) > 0.6]
 
+#%% correlation - spearman
+
+corr_matrix = df_train.drop(columns=['Name']).corr(method='spearman')
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', square=True)
+plt.title('Covariance Matrix Heatmap')
+plt.show()
+
+# detect highly correlated columns
+threshold1 = 0.6
+threshold2 = 1
+
+res = corr_matrix\
+    .where(lambda x: (abs(x) > threshold1) & (abs(x) < threshold2))\
+    .stack().reset_index()\
+    .rename(columns={'level_0': 'Feature1', 'level_1': 'Feature2', 0: 'Correlation'})
+res.loc[res.Feature1 != res.Feature2]
+
+# date columns have high correlation with each other
+
+corr_matrix["Close"][abs(corr_matrix["Close"]) > 0.6]
+
 #%% histograms
 
+def draw_histograms(data, columns, group_by_column, output_path):
+    grouped = data[columns].groupby(group_by_column)
+    # create histograms for each group
+    for name, group in grouped:
+        group.hist(bins=50, figsize=(10, 8), label=name)
+        plt.suptitle(name, fontsize=16)
+        plt.savefig(f"{output_path}/{name}_histogram.png")
+        plt.close() 
+        
 hist_columns = ["Close", "High", "Low", "Open", "Volume", "Timestamp", "Name"]
-grouped = df_train[hist_columns].groupby("Name")
+output_path = "plots/histograms"
 
-# create a histogram for each group
-for name, group in grouped:
-    group.hist(bins=50, figsize=(10, 8), label=name)
-    plt.suptitle(name, fontsize=16)
-    
-plt.tight_layout()  # Adjust layout to avoid overlap
-plt.show()
+draw_histograms(df_train, hist_columns, "Name", output_path)
+# Volume between currencies is always 0!
 
-# TODO save plot to directory
-# Volume between currencies is 0
+# OPTIONAL group by index group
 
-# df_train.hist(bins=50, figsize=(10, 8))
-# plt.suptitle('Histograms of DataFrame Columns')
-# plt.tight_layout()
-# plt.show()
+#%% boxplots
 
-# it is better to show separate histograms for every index
+def draw_boxplots(data, columns, group_by_column, output_path):
+    grouped = data[columns].groupby(group_by_column)
+    # create boxplots for each group
+    for name, group in grouped:
+        fig, axes = plt.subplots(1, len(columns)-1, figsize=(10, 8))
+        # plot each feature in a separate subplot
+        for i, col in enumerate(columns):
+            if col == group_by_column:
+                continue
+            group.boxplot(column=col, ax=axes[i])
+            axes[i].set_title(col, fontsize=12)
+            # axes[i].set_ylabel(col)
+        plt.tight_layout()
+        plt.suptitle(name, fontsize=16)
+        plt.subplots_adjust(top=0.9)
+        plt.savefig(f"{output_path}/{name}_boxplot.png")
+        plt.close()
+        
+box_columns = ["Close", "High", "Low", "Open", "Volume", "Timestamp", "Name"]
+output_path = "plots/boxplots"
 
-#%% full boxplots
-
-num_columns = df_train.shape[1]
-fig, axes = plt.subplots(1, num_columns, figsize=(15, 6), sharey=False)
-
-for i, column in enumerate(df_train.drop(columns=['Freq']).columns):
-    sns.boxplot(y=df_train[column], ax=axes[i])
-    axes[i].set_title(f'Boxplot of {column}')
-
-plt.tight_layout()
-plt.show()
-
-df_train.describe()
-
-#%% trimmed boxplots
-
-# OPTIONAL
-
-num_columns = df_train.shape[1]
-fig, axes = plt.subplots(1, num_columns, figsize=(15, 6), sharey=False)
-
-for i, column in enumerate(df_train.drop(columns=['Freq']).columns):
-    q = df_train[column].quantile(0.99)
-    sns.boxplot(y=df_train[df_train[column] < q][column], ax=axes[i])
-    axes[i].set_title(f'Boxplot of {column}')
-
-plt.tight_layout()
-plt.show()
-
-df_train.describe()
+draw_boxplots(df_train, box_columns, "Name", output_path)
 
 #%% outliers
 
@@ -286,10 +306,67 @@ def modify_outliers(df, cols_to_modify, quantiles):
 #%% transformations
 
 
+#%% standarization
 
-#%% normalisation
+df_train.info()
+# Timestamp ?
 
-# ???
+from sklearn.preprocessing import StandardScaler
+
+columns_to_standarize = ["Close", "High", "Low", "Open", "Volume"]
+# cast Volume to float before scaling
+# possibly apply ln(x+1) or MinMaxScaler
+
+scalers = {}
+
+# train
+for name, group in df_train.groupby('Name'):
+    scaler = StandardScaler()
+    scaled_values = scaler.fit_transform(group[columns_to_standarize])
+    df_train.loc[df_train['Name'] == name, columns_to_standarize] = scaled_values
+    scalers[name] = scaler
+
+# val
+for name, group in df_val.groupby('Name'):
+    scaler = scalers[name]
+    scaled_values = scaler.transform(group[columns_to_standarize])
+    df_val.loc[df_val['Name'] == name, columns_to_standarize] = scaled_values
+    
+# test
+for name, group in df_test.groupby('Name'):
+    scaler = scalers[name]
+    scaled_values = scaler.transform(group[columns_to_standarize])
+    df_test.loc[df_test['Name'] == name, columns_to_standarize] = scaled_values
+
+print(df_train)
+
+#%% example inversion
+
+columns_to_standarize = ["Close", "High", "Low", "Open", "Volume"]
+AAPL_scaled = data[data['Name'] == 'AAPL'][columns_to_standarize]
+AAPL_original = scalers['AAPL'].inverse_transform(AAPL_scaled)
+AAPL_original.shape
+
+#%% drop Name
+
+columns_to_drop = ["Name"]
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", Warning)
+    for data in [df_train, df_val, df_test]:
+        data.drop(columns=['Date'], inplace=True)
+
+#%% scaling remaining columns
+
+# drop Timestamp
+# MinMaxScaling
+# sine and cosine transformation - cyclic features
+# or leave as it is
+
+
+#%% identify target column
+
+# TODO add targets
 
 #%%
 
