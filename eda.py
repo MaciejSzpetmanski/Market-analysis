@@ -163,10 +163,9 @@ df_train.shape
 # stratify by date (day-month-year)
 df_val, df_test = train_test_split(df[df['Date'] > split_date], test_size=0.6, random_state=42, stratify=df[df['Date'] > split_date]['Date'])
 
-# extract targets later
-# y_train = df_train['Close']
-# y_val = df_val['Close']
-# y_test = df_test['Close']
+y_train = df_train['Close']
+y_val = df_val['Close']
+y_test = df_test['Close']
 
 import warnings
 
@@ -349,12 +348,12 @@ AAPL_original.shape
 
 #%% drop Name
 
-columns_to_drop = ["Name"]
+columns_to_drop = ["Timestamp"] # Name will be used to group data
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", Warning)
     for data in [df_train, df_val, df_test]:
-        data.drop(columns=['Date'], inplace=True)
+        data.drop(columns=columns_to_drop, inplace=True)
 
 #%% scaling remaining columns
 
@@ -363,10 +362,64 @@ with warnings.catch_warnings():
 # sine and cosine transformation - cyclic features
 # or leave as it is
 
+from sklearn.preprocessing import MinMaxScaler
+
+# optionally exclude Names
+columns_to_scale = [col for col in df_train.columns if col not in columns_to_standarize + ["Name"]]
+
+# isconsistent types
+scaler = MinMaxScaler()
+df_train[columns_to_scale] = scaler.fit_transform(df_train[columns_to_scale])
+df_val[columns_to_scale] = scaler.transform(df_val[columns_to_scale])
+df_test[columns_to_scale] = scaler.transform(df_test[columns_to_scale])
+
+df_train.min()
+df_train.max()
 
 #%% identify target column
 
+df_train.columns
+df_train.info()
 # TODO add targets
+
+#%% preparing data as time series
+
+N = 20
+
+# omit Names!
+excluding = [col for col in df.columns if col.startswith("Name")]
+# setting chronological order
+df1 = df_train.groupby("Name", group_keys=False).apply(lambda x: x.sort_values(["Date_year", "Date_month", "Date_day_of_month"]))
+cols = [col for col in df1.columns if col not in excluding]
+n = len(df_train.columns)
+for i in range(1, N):
+    for col in cols:
+        df1[col + "_" + str(i)] = df1.groupby("Name", group_keys=False)[col].shift(i)
+
+# removing rows with missing values
+df1 = df1.groupby('Name').apply(lambda group: group.iloc[N-1:])
+
+df1[df1.isna().any(axis=1)].shape
+
+# possibly rename original columns to _0 format
+df1.Close_1[df1.Close_19.isna()].index
+df1.Close_19[df1.Close_19.isna()].index
+
+df1.Close_19 == pd.n
+np.where(df1.Close_19 == None)
+
+
+
+df1.shape
+df1.apply(lambda x: x.iloc[20:])
+df1.groupby('Name', group_keys=False).apply(lambda x: x.iloc[20:])
+        
+# df1 = df1.iloc[:, n:]
+df1.columns
+df1.shape
+# optional ungroupping data
+# df1 = df1.reset_index(drop=True)
+df1.info()
 
 #%%
 
