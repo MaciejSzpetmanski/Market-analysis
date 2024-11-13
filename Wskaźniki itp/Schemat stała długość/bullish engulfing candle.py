@@ -1,4 +1,6 @@
 import pandas as pd
+import numpy as np
+
 
 # Funkcja wykrywająca formację "bullish engulfing candle"
 def wykryj_bullish_engulfing(dane):
@@ -11,7 +13,9 @@ def wykryj_bullish_engulfing(dane):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(1, len(dane)):
+    n = len(dane)
+    bullish_engulfing = np.full(n, False)
+    for i in range(1, n):
         pierwsza_swieca = dane.iloc[i - 1]
         druga_swieca = dane.iloc[i]
 
@@ -27,6 +31,6 @@ def wykryj_bullish_engulfing(dane):
 
         # Sprawdzanie czy świeca pochłąniająca jest odpowiednio większa
         if (druga_swieca['close']-druga_swieca['open'] >= 1.7*(pierwsza_swieca['open']-pierwsza_swieca['close'])):
-            return True  # Wykryto formację "bullish engulfing candle"
+            bullish_engulfing[i] = True  # Wykryto formację "bullish engulfing candle"
 
-    return False  # Jeśli nie wykryto formacji
+    return bullish_engulfing

@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Funkcja wykrywająca formację "collapsing doji star"
 def wykryj_collapsing_doji_star(dane, doji_procent=0.1):
@@ -12,7 +13,9 @@ def wykryj_collapsing_doji_star(dane, doji_procent=0.1):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(2, len(dane)):
+    n = len(dane)
+    collapsing_doji_star = np.full(n, False)
+    for i in range(2, n):
         pierwsza_swieca = dane.iloc[i - 2]
         druga_swieca = dane.iloc[i - 1]
         trzecia_swieca = dane.iloc[i]
@@ -32,8 +35,7 @@ def wykryj_collapsing_doji_star(dane, doji_procent=0.1):
             continue  # Trzecia świeca nie jest spadkowa lub nie zamyka się poniżej zamknięcia pierwszej świecy, pomijamy
 
         # Jeśli wszystkie warunki są spełnione, formacja została wykryta
-        return True
+        collapsing_doji_star[i] = True
 
-    # Jeśli nie wykryto formacji, zwróć False
-    return False
+    return collapsing_doji_star
 

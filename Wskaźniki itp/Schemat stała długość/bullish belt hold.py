@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Funkcja wykrywająca formację "bullish belt hold" w danych cenowych
 def wykryj_bullish_belt_hold(dane):
@@ -11,7 +12,9 @@ def wykryj_bullish_belt_hold(dane):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(len(dane)):
+    n = len(dane)
+    bullish_belt_hold = np.full(n, False)
+    for i in range(n):
         swieca = dane.iloc[i]
 
         # Sprawdzenie, czy świeca jest wzrostowa (close > open)
@@ -29,7 +32,6 @@ def wykryj_bullish_belt_hold(dane):
             continue  # Świeca nie jest wystarczająco długa, pomijamy
 
         # Jeśli wszystkie warunki są spełnione, formacja została wykryta
-        return True
+        bullish_belt_hold[i] = True
 
-    # Jeśli nie wykryto formacji, zwróć False
-    return False
+    return bullish_belt_hold

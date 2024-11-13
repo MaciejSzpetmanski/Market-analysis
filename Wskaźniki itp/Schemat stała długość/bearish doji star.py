@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Funkcja wykrywająca formację "bearish doji star"
 def wykryj_bearish_doji_star(dane, doji_procent=0.1):
@@ -12,7 +13,9 @@ def wykryj_bearish_doji_star(dane, doji_procent=0.1):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(1, len(dane)):
+    n = len(dane)
+    bearish_doji_star = np.full(n, False)
+    for i in range(1, n):
         pierwsza_swieca = dane.iloc[i - 1]
         druga_swieca = dane.iloc[i]
 
@@ -31,7 +34,7 @@ def wykryj_bearish_doji_star(dane, doji_procent=0.1):
             continue  # Brak luki w górę, pomijamy
 
         # Jeśli wszystkie warunki są spełnione, formacja została wykryta
-        return True
+        bearish_doji_star[i] = True
 
     # Jeśli nie wykryto formacji, zwróć False
-    return False
+    return bearish_doji_star

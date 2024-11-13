@@ -1,4 +1,5 @@
 import pandas as pd 
+import numpy as np
 
 # Funkcja wykrywająca formację "bearish horn formation"
 def wykryj_bearish_horn_formation(dane, minimalny_cien=1.5):
@@ -12,7 +13,9 @@ def wykryj_bearish_horn_formation(dane, minimalny_cien=1.5):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(2, len(dane)):
+    n = len(dane)
+    bearish_horn_formation = np.full(n, False)
+    for i in range(2, n):
         pierwsza_swieca = dane.iloc[i - 2]
         srodkowa_swieca = dane.iloc[i - 1]
         trzecia_swieca = dane.iloc[i]
@@ -33,6 +36,6 @@ def wykryj_bearish_horn_formation(dane, minimalny_cien=1.5):
         if korpus_srodkowej >= korpus_pierwszej or korpus_srodkowej >= korpus_trzeciej:
             continue  # Środkowa świeca nie ma mniejszego korpusu
 
-        return True  # Wykryto "bearish horn formation"
+        bearish_horn_formation[i] = True  # Wykryto "bearish horn formation"
 
-    return False  # Jeśli nie wykryto formacji
+    return bearish_horn_formation

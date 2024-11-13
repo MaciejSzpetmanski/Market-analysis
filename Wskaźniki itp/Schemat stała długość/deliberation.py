@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Funkcja wykrywająca formację "deliberation" w danych cenowych
 def wykryj_deliberation(dane):
@@ -11,7 +12,9 @@ def wykryj_deliberation(dane):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(2, len(dane)):
+    n = len(dane)
+    deliberation = np.full(n, False)
+    for i in range(2, n):
         pierwsza_swieca = dane.iloc[i - 2]
         druga_swieca = dane.iloc[i - 1]
         trzecia_swieca = dane.iloc[i]
@@ -36,7 +39,6 @@ def wykryj_deliberation(dane):
             continue  # Brak sygnału osłabienia, pomijamy
         
         # Jeśli wszystkie warunki są spełnione, formacja została wykryta
-        return True
+        deliberation[i] = True
 
-    # Jeśli nie wykryto formacji, zwróć False
-    return False
+    return deliberation

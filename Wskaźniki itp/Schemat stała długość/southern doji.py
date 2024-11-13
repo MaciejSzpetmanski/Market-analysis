@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Funkcja wykrywająca formację "southern doji"
 def wykryj_southern_doji(dane, doji_procent=0.1):
@@ -12,7 +13,9 @@ def wykryj_southern_doji(dane, doji_procent=0.1):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(1, len(dane)):
+    n = len(dane)
+    southern_doji = np.full(n, False)
+    for i in range(1, n):
         poprzednia_swieca = dane.iloc[i - 1]
         obecna_swieca = dane.iloc[i]
 
@@ -27,7 +30,6 @@ def wykryj_southern_doji(dane, doji_procent=0.1):
             continue  # Brak spadkowej świecy przed doji, pomijamy
 
         # Jeśli wszystkie warunki są spełnione, formacja została wykryta
-        return True
+        southern_doji[i] = True
 
-    # Jeśli nie wykryto formacji, zwróć False
-    return False
+    return southern_doji

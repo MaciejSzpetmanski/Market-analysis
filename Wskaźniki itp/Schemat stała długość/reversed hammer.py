@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Funkcja wykrywająca formację "reversed hammer"
 def wykryj_reversed_hammer(dane):
@@ -11,7 +12,9 @@ def wykryj_reversed_hammer(dane):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(len(dane)):
+    n = len(dane)
+    reversed_hammer = np.full(n, False)
+    for i in range(n):
         swieca = dane.iloc[i]
 
         # Obliczenie wielkości korpusu, górnego i dolnego cienia
@@ -21,6 +24,6 @@ def wykryj_reversed_hammer(dane):
 
         # Warunki formacji reversed hammer: długi górny cień, mały korpus i brak dolnego cienia
         if gorny_cien >= 2 * korpus and dolny_cien <= 0.2 * korpus:
-            return True  # Wykryto formację "reversed hammer"
+            reversed_hammer[i] = True  # Wykryto formację "reversed hammer"
 
-    return False  # Jeśli nie wykryto formacji
+    return reversed_hammer

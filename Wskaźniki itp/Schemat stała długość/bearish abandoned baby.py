@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Funkcja wykrywająca formację "bearish abandoned baby" w danych cenowych
 def wykryj_bearish_abandoned_baby(dane, doji_procent=0.15):
@@ -12,7 +13,9 @@ def wykryj_bearish_abandoned_baby(dane, doji_procent=0.15):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(1, len(dane) - 1):
+    n = len(dane)
+    bearish_abandoned_baby = np.full(n, False)
+    for i in range(1, n - 1):
         pierwsza_swieca = dane.iloc[i - 1]
         druga_swieca = dane.iloc[i]
         trzecia_swieca = dane.iloc[i + 1]
@@ -36,7 +39,6 @@ def wykryj_bearish_abandoned_baby(dane, doji_procent=0.15):
             continue  # Brak luki w dół, pomijamy ten zestaw
 
         # Jeśli wszystkie warunki są spełnione, formacja została wykryta
-        return True
+        bearish_abandoned_baby[i] = True
 
-    # Jeśli nie wykryto formacji, zwróć False
-    return False
+    return bearish_abandoned_baby

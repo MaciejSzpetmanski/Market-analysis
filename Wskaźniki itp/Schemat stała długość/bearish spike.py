@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Funkcja wykrywająca formację "bearish spike"
 def wykryj_bearish_spike(dane, stosunek_cienia_do_korpusu=2):
@@ -12,7 +13,9 @@ def wykryj_bearish_spike(dane, stosunek_cienia_do_korpusu=2):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(len(dane)):
+    n = len(dane)
+    bearish_spike = np.full(n, False)
+    for i in range(n):
         swieca = dane.iloc[i]
 
         # Obliczenie wielkości korpusu, górnego i dolnego cienia
@@ -22,6 +25,6 @@ def wykryj_bearish_spike(dane, stosunek_cienia_do_korpusu=2):
 
         # Warunki formacji bearish spike: długi górny cień i mały korpus oraz brak dolnego cienia
         if gorny_cien >= stosunek_cienia_do_korpusu * korpus and dolny_cien <= 0.2 * gorny_cien:
-            return True  # Wykryto formację "bearish spike"
+            bearish_spike[i] = True  # Wykryto formację "bearish spike"
 
-    return False  # Jeśli nie wykryto formacji
+    return bearish_spike

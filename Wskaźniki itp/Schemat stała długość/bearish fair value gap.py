@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Funkcja wykrywająca formację "bearish fair value gap"
 def wykryj_bearish_fair_value_gap(dane):
@@ -11,7 +12,9 @@ def wykryj_bearish_fair_value_gap(dane):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(2, len(dane)):
+    n = len(dane)
+    bearish_engulfing = np.full(n, False)
+    for i in range(2, n):
         poprzednia_swieca = dane.iloc[i - 2]
         srodkowa_swieca = dane.iloc[i - 1]
         obecna_swieca = dane.iloc[i]
@@ -24,6 +27,6 @@ def wykryj_bearish_fair_value_gap(dane):
 
         # Sprawdzenie, czy jest luka między ceną minimalną pierwszej świecy a ceną maksymalną trzeciej świecy
         if obecna_swieca['high'] < poprzednia_swieca['low']:
-            return True  # Wykryto "bearish fair value gap"
+            bearish_engulfing[i] = True  # Wykryto "bearish fair value gap"
 
-    return False  # Jeśli nie wykryto formacji
+    return bearish_engulfing

@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Funkcja wykrywająca formację "concealing baby swallow" w danych cenowych
 def wykryj_concealing_baby_swallow(dane):
@@ -11,7 +12,9 @@ def wykryj_concealing_baby_swallow(dane):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(3, len(dane)):
+    n = len(dane)
+    concealing_baby_swallow = np.full(n, False)
+    for i in range(3, n):
         pierwsza_swieca = dane.iloc[i - 3]
         druga_swieca = dane.iloc[i - 2]
         trzecia_swieca = dane.iloc[i - 1]
@@ -37,7 +40,6 @@ def wykryj_concealing_baby_swallow(dane):
             continue  # Czwarta świeca nie jest spadkowa lub zamyka się powyżej trzeciej świecy, pomijamy
 
         # Jeśli wszystkie warunki są spełnione, formacja została wykryta
-        return True
+        concealing_baby_swallow[i] = True
 
-    # Jeśli nie wykryto formacji, zwróć False
-    return False
+    return concealing_baby_swallow

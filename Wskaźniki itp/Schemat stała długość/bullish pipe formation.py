@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Funkcja wykrywająca formację "bullish pipe formation"
 def wykryj_bullish_pipe_formation(dane, minimalny_korpus=0.8):
@@ -12,7 +13,9 @@ def wykryj_bullish_pipe_formation(dane, minimalny_korpus=0.8):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(1, len(dane)):
+    n = len(dane)
+    bullish_pipe_formation = np.full(n, False)
+    for i in range(1, n):
         pierwsza_swieca = dane.iloc[i - 1]
         druga_swieca = dane.iloc[i]
 
@@ -30,6 +33,6 @@ def wykryj_bullish_pipe_formation(dane, minimalny_korpus=0.8):
 
         # Sprawdzenie, czy druga świeca zamyka się powyżej zamknięcia pierwszej świecy
         if druga_swieca['close'] > pierwsza_swieca['close']:
-            return True  # Wykryto "bullish pipe formation"
+            bullish_pipe_formation[i] = True  # Wykryto "bullish pipe formation"
 
-    return False  # Jeśli nie wykryto formacji
+    return bullish_pipe_formation

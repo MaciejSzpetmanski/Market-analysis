@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Funkcja wykrywająca formację "bearish engulfing candle"
 def wykryj_bearish_engulfing(dane):
@@ -11,7 +12,9 @@ def wykryj_bearish_engulfing(dane):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(1, len(dane)):
+    n = len(dane)
+    bearish_engulfing = np.full(n, False)
+    for i in range(1, n):
         pierwsza_swieca = dane.iloc[i - 1]
         druga_swieca = dane.iloc[i]
 
@@ -27,6 +30,6 @@ def wykryj_bearish_engulfing(dane):
 
         # Sprawdzanie czy świeca pochłąniająca jest odpowiednio większa
         if (druga_swieca['open']-druga_swieca['close'] >= 1.7*(pierwsza_swieca['close']-pierwsza_swieca['open'])):
-            return True  # Wykryto formację "bearish engulfing candle"
+            bearish_engulfing[i] = True  # Wykryto formację "bearish engulfing candle"
 
-    return False  # Jeśli nie wykryto formacji
+    return bearish_engulfing

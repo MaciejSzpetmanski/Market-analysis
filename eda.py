@@ -2,8 +2,8 @@
 
 import os
 
-# path = "D:\Studia\semestr7\inźynierka\Market-analysis"
-path = "C:\Studia\Market-analysis"
+path = "D:\Studia\semestr7\inźynierka\Market-analysis"
+# path = "C:\Studia\Market-analysis"
 os.chdir(path)
 
 #%% loading data
@@ -20,7 +20,7 @@ def load_data(directory_name, suffix=""):
         if os.path.isfile(file_path) and file_path.endswith(".csv"):
             df_input = pd.read_csv(file_path)
             # renaming the first column to Date
-            df_input.rename(columns={'Price': 'Date'}, inplace=True)
+            df_input.rename(columns={'Price': 'date'}, inplace=True)
             # dropping first 2 empty rows 
             df_input.drop([0, 1], inplace=True)
             
@@ -28,33 +28,31 @@ def load_data(directory_name, suffix=""):
             file_name += "_"
             file_info = file_name.replace(".csv", "").split("_")
             # adding source information
-            df_input["Name"] = file_info[0]
-            df_input["Freq"] = file_info[2]
+            df_input["name"] = file_info[0]
+            # df_input["Freq"] = file_info[2]
             
             df = pd.concat([df, df_input], ignore_index=True)
     return df
 
 
-# df = load_data("data")
-df = load_data("data", "_data_1d.csv") # only daily frequency ???
+df = load_data("data", "_data_1d.csv")
+# lowercase columns
+df.columns = df.columns.str.lower()
+df = df.rename(columns={"adj close": "adjusted_close"})
 
 df.shape
 df.head()
 df.columns
-
-#%% dropping Adj Close
-
-df = df.drop(columns=["Adj Close"])
 
 #%% converting column types
 
 df.describe()
 df.info()
 
-df['Volume']
-df['Volume'] = df['Volume'].astype('int64')
+df['volume']
+df['volume'] = df['volume'].astype('int64')
 
-float_columns = ['Close', 'High', 'Low', 'Open'] #'Adj Close'
+float_columns = ['close', 'high', 'low', 'open', 'adjusted_close']
 for col in float_columns:
     df[col] = df[col].astype('float')
 
@@ -62,62 +60,75 @@ df.info()
 
 #%% removing duplicates
 
-subset = list(filter(lambda x: x != 'Freq', df.columns))
-df.drop_duplicates(subset=subset, inplace=True)
+df = df.drop_duplicates()
 df = df.reset_index(drop=True)
+
+#%% formations test
+
+import importlib.util
+import sys
+
+# Specify the path to the file
+file_path = os.path.join(path, 'Wskaźniki itp/Schemat stała długość/advance block.py')
+
+# Load the module
+spec = importlib.util.spec_from_file_location("advance_block", file_path)
+my_module = importlib.util.module_from_spec(spec)
+sys.modules["my_module"] = my_module
+spec.loader.exec_module(my_module)
+
+functions = {name: func for name, func in vars(my_module).items() if callable(func)}
+# Now you can access my_function
+my_function = my_module.wykryj_advance_block
+
+res = df.groupby("name", group_keys=False).apply(lambda x: my_function(x))
+res = np.concatenate([my_function(group) for _, group in df.groupby("name")])
+
+df["advance_block"] = res
+
+my_function(df)
 
 #%% represent all prices in dollars
 
-# OPTIONAL change labels to one pattern: EURUSD, USDJPY ???
-
-# problem with EURGBP
-df.loc[df.Name == "EURGBP=X", "Open"]
-
 # counting GBPUSD
-eurusd_df = df[df.Name == "EURUSD=X"][["Date"] + float_columns]
-eurgbp_df = df[df.Name == "EURGBP=X"][["Date", "Volume", "Freq"] + float_columns]
+eurusd_df = df[df.name == "EURUSD=X"][["date"] + float_columns]
+eurgbp_df = df[df.name == "EURGBP=X"][["date", "volume"] + float_columns]
 
-merged_df = pd.merge(eurusd_df, eurgbp_df, on="Date", how="inner")
+merged_df = pd.merge(eurusd_df, eurgbp_df, on="date", how="inner")
 
 for col in float_columns:
     merged_df[col] = merged_df[col+"_x"] / merged_df[col+"_y"]
 
-merged_df["Name"] = "GBPUSD=X"
-
+merged_df["name"] = "GBPUSD=X"
 merged_df = merged_df[df.columns]
-
 df = pd.concat([df, merged_df], ignore_index=True)
 
 # remove EURGBP
-df = df[~(df.Name == "EURGBP=X")]
+df = df[~(df.name == "EURGBP=X")]
 df = df.reset_index(drop=True)
 
 #%% time handling
 
 from feature_engine.datetime import DatetimeFeatures
 
-df['Date'] = pd.to_datetime(df['Date'])
-df['Timestamp'] = df['Date'].astype('int64') // 10**9
+df['date'] = pd.to_datetime(df['date'])
 
 # saving date
-date = df['Date']
+date = df['date']
 
 dt_features = DatetimeFeatures(
-    variables=['Date'],
+    variables=['date'],
     features_to_extract=[
-        'month', 'quarter', 'semester', 'year', 'week', 
-        'day_of_week', 'day_of_month', 'day_of_year', 
-        'weekend', 'month_start', 'month_end', 
-        'quarter_start', 'quarter_end', 'year_start', 
-        'year_end', 'leap_year', 'days_in_month', 
-        'hour', 'minute', 'second'
+        'month', 'quarter', 'semester', 'year', 'week',
+        'day_of_week', 'day_of_month', 'day_of_year',
+        'weekend', 'month_start', 'month_end',
+        'quarter_start', 'quarter_end', 'year_start',
+        'year_end', 'leap_year', 'days_in_month'
     ]
 )
 
-# "hour", "minute", "second" are not used
-
 df = dt_features.fit_transform(df)
-df['Date'] = date
+df['date'] = date
 
 df.info()
 
@@ -128,45 +139,37 @@ df.info()
 for col in df.columns:
     print(f"{col}: {len(df[col].unique())}")
     
-df.Date_second
-df.Date_minute
-df.Date_hour
-df.Date_leap_year
-df.Date_year_end.value_counts()
-df.Date_weekend.value_counts() # there is some data from weekend
-df[df.Date_weekend == 1]["Name"] # crypto
+df.date_leap_year
+df.date_year_end.value_counts()
+df.date_weekend.value_counts() # there is some data from weekend
+df[df.date_weekend == 1]["name"] # crypto
 
-cols_to_remove = ["Freq", "Date_hour", "Date_minute", "Date_second"] # Freq, if only one frequency is used
+# cols_to_remove = ["Freq", "Date_hour", "Date_minute", "Date_second"] # Freq, if only one frequency is used
 # possibly remove these columns earlier
-df = df.drop(columns=cols_to_remove)
+# df = df.drop(columns=cols_to_remove)
 
 #%% name encoding (one-hot)
 
-name_column = df["Name"]
+name_column = df["name"]
 
-df = pd.get_dummies(df, columns=['Name'], prefix='Name',  dtype=int)
+df = pd.get_dummies(df, columns=['name'], prefix='name',  dtype=int)
 df.shape
 df.columns
 
-df["Name"] = name_column
+df["name"] = name_column
 
 #%% split
 
 from sklearn.model_selection import train_test_split
 
-last_date = df['Date'].max()
+last_date = df['date'].max()
 split_date = last_date - pd.DateOffset(years=1)
 
-df_train = df[df['Date'] <= split_date]
+df_train = df[df['date'] <= split_date]
 df_train.shape
 
 # stratify by date (day-month-year)
-df_val, df_test = train_test_split(df[df['Date'] > split_date], test_size=0.6, random_state=42, stratify=df[df['Date'] > split_date]['Date'])
-
-# later
-# y_train = df_train['Close']
-# y_val = df_val['Close']
-# y_test = df_test['Close']
+df_val, df_test = train_test_split(df[df['date'] > split_date], test_size=0.6, random_state=42, stratify=df[df['date'] > split_date]['date'])
 
 import warnings
 
@@ -174,7 +177,7 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore", Warning)
     # removing Date column
     for data in [df_train, df_val, df_test]:
-        data.drop(columns=['Date'], inplace=True)
+        data.drop(columns=['date'], inplace=True)
 
 print(f'train: {df_train.shape}')
 print(f'val: {df_val.shape}')
@@ -189,8 +192,7 @@ print(f'test: {df_test.shape}')
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# corr_matrix = df_train.drop(columns=['Freq']).corr()
-corr_matrix = df_train.drop(columns=['Name']).corr()
+corr_matrix = df_train.drop(columns=['name']).corr()
 
 plt.figure(figsize=(8, 6))
 sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', square=True)
@@ -212,11 +214,11 @@ res.loc[res.Feature1 != res.Feature2]
 #%% check correlation with Close feature
 
 # TODO check again after adding fractal info
-corr_matrix["Close"][abs(corr_matrix["Close"]) > 0.6]
+corr_matrix["close"][abs(corr_matrix["close"]) > 0.6]
 
 #%% correlation - spearman
 
-corr_matrix = df_train.drop(columns=['Name']).corr(method='spearman')
+corr_matrix = df_train.drop(columns=['name']).corr(method='spearman')
 
 plt.figure(figsize=(8, 6))
 sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', square=True)
@@ -235,7 +237,7 @@ res.loc[res.Feature1 != res.Feature2]
 
 # date columns have high correlation with each other
 
-corr_matrix["Close"][abs(corr_matrix["Close"]) > 0.6]
+corr_matrix["close"][abs(corr_matrix["close"]) > 0.6]
 
 #%% histograms
 
@@ -248,13 +250,10 @@ def draw_histograms(data, columns, group_by_column, output_path):
         plt.savefig(f"{output_path}/{name}_histogram.png")
         plt.close() 
         
-hist_columns = ["Close", "High", "Low", "Open", "Volume", "Timestamp", "Name"]
+hist_columns = ["close", "high", "low", "open", "volume", "name"]
 output_path = "plots/histograms"
 
-draw_histograms(df_train, hist_columns, "Name", output_path)
-# Volume between currencies is always 0!
-
-# OPTIONAL group by index group
+draw_histograms(df_train, hist_columns, "name", output_path)
 
 #%% boxplots
 
@@ -276,32 +275,10 @@ def draw_boxplots(data, columns, group_by_column, output_path):
         plt.savefig(f"{output_path}/{name}_boxplot.png")
         plt.close()
         
-box_columns = ["Close", "High", "Low", "Open", "Volume", "Timestamp", "Name"]
+box_columns = ["close", "high", "low", "open", "volume", "name"]
 output_path = "plots/boxplots"
 
-draw_boxplots(df_train, box_columns, "Name", output_path)
-
-#%% outliers
-
-# OPTIONAL rather not
-# apply separately for every index
-
-def get_quantiles(df, cols_to_modify):
-    quantiles = []
-    for col in cols_to_modify:
-        upper_lim = df[col].quantile(.99)
-        lower_lim = df[col].quantile(.01)
-        quantiles.append((lower_lim, upper_lim))
-    return quantiles
-
-# zamiana wartosci odstających na skrajne, po 1% wartosci z góry i z dołu
-def modify_outliers(df, cols_to_modify, quantiles):
-    for i in range(len(cols_to_modify)):
-        upper_lim = quantiles[i][1]
-        lower_lim = quantiles[i][0]
-        col = cols_to_modify[i]
-        df.loc[df[col] <= lower_lim, col] = lower_lim
-        df.loc[df[col] > upper_lim, col] = upper_lim
+draw_boxplots(df_train, box_columns, "name", output_path)
 
 #%% transformations
 
@@ -309,52 +286,42 @@ def modify_outliers(df, cols_to_modify, quantiles):
 #%% standarization
 
 df_train.info()
-# Timestamp ?
 
 from sklearn.preprocessing import StandardScaler
 
-columns_to_standarize = ["Close", "High", "Low", "Open", "Volume"]
+columns_to_standarize = ["close", "high", "low", "open", "volume"]
 # cast Volume to float before scaling
 # possibly apply ln(x+1) or MinMaxScaler
 
 scalers = {}
 
 # train
-for name, group in df_train.groupby('Name'):
+for name, group in df_train.groupby('name'):
     scaler = StandardScaler()
     scaled_values = scaler.fit_transform(group[columns_to_standarize])
-    df_train.loc[df_train['Name'] == name, columns_to_standarize] = scaled_values
+    df_train.loc[df_train['name'] == name, columns_to_standarize] = scaled_values
     scalers[name] = scaler
 
 # val
-for name, group in df_val.groupby('Name'):
+for name, group in df_val.groupby('name'):
     scaler = scalers[name]
     scaled_values = scaler.transform(group[columns_to_standarize])
-    df_val.loc[df_val['Name'] == name, columns_to_standarize] = scaled_values
+    df_val.loc[df_val['name'] == name, columns_to_standarize] = scaled_values
     
 # test
-for name, group in df_test.groupby('Name'):
+for name, group in df_test.groupby('name'):
     scaler = scalers[name]
     scaled_values = scaler.transform(group[columns_to_standarize])
-    df_test.loc[df_test['Name'] == name, columns_to_standarize] = scaled_values
+    df_test.loc[df_test['name'] == name, columns_to_standarize] = scaled_values
 
 print(df_train)
 
 #%% example inversion
 
-columns_to_standarize = ["Close", "High", "Low", "Open", "Volume"]
-AAPL_scaled = data[data['Name'] == 'AAPL'][columns_to_standarize]
+columns_to_standarize = ["close", "high", "low", "open", "volume"]
+AAPL_scaled = data[data['name'] == 'AAPL'][columns_to_standarize]
 AAPL_original = scalers['AAPL'].inverse_transform(AAPL_scaled)
 AAPL_original.shape
-
-#%% drop columns
-
-columns_to_drop = ["Timestamp"] # Name will be used to group data, Timestamp may be useful
-
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore", Warning)
-    for data in [df_train, df_val, df_test]:
-        data.drop(columns=columns_to_drop, inplace=True)
 
 #%% scaling remaining columns
 
@@ -366,7 +333,7 @@ with warnings.catch_warnings():
 from sklearn.preprocessing import MinMaxScaler
 
 # optionally exclude Names
-columns_to_scale = [col for col in df_train.columns if col not in columns_to_standarize + ["Name"]]
+columns_to_scale = [col for col in df_train.columns if col not in columns_to_standarize + ["name"]]
 
 # isconsistent types
 scaler = MinMaxScaler()
@@ -398,10 +365,10 @@ def create_time_series(data, columns, group_by_column, target_column, sort_colum
     return data
 
 # omit Names
-columns = [col for col in df_train.columns if not col.startswith("Name")] # cols to shift
-group_by_column = "Name"
-target_column = "Close"
-sort_columns = ["Date_year", "Date_month", "Date_day_of_month"]
+columns = [col for col in df_train.columns if not col.startswith("name")] # cols to shift
+group_by_column = "name"
+target_column = "close"
+sort_columns = ["date_year", "date_month", "date_day_of_month"]
 N = 20
 
 # strange indexes

@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Funkcja wykrywająca formację "hammer"
 def wykryj_hammer(dane):
@@ -11,7 +12,9 @@ def wykryj_hammer(dane):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(len(dane)):
+    n = len(dane)
+    hammer = np.full(n, False)
+    for i in range(n):
         swieca = dane.iloc[i]
 
         # Obliczenie wielkości korpusu, górnego i dolnego cienia
@@ -21,7 +24,6 @@ def wykryj_hammer(dane):
 
         # Warunki formacji hammer: długi dolny cień, mały korpus i brak górnego cienia
         if dolny_cien >= 2 * korpus and gorny_cien <= 0.2 * korpus:
-            return True  # Wykryto formację "hammer"
+            hammer[i] = True  # Wykryto formację "hammer"
 
-    return False  # Jeśli nie wykryto formacji
-
+    return hammer

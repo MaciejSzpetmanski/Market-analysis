@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Funkcja wykrywająca formację "dark cloud cover" w danych cenowych
 def wykryj_dark_cloud_cover(dane):
@@ -11,7 +12,9 @@ def wykryj_dark_cloud_cover(dane):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(1, len(dane)):
+    n = len(dane)
+    dark_cloud_cover = np.full(n, False)
+    for i in range(1, n):
         pierwsza_swieca = dane.iloc[i - 1]
         druga_swieca = dane.iloc[i]
 
@@ -29,7 +32,6 @@ def wykryj_dark_cloud_cover(dane):
             continue  # Zamknięcie drugiej świecy nie jest poniżej połowy korpusu pierwszej świecy, pomijamy
 
         # Jeśli wszystkie warunki są spełnione, formacja została wykryta
-        return True
+        dark_cloud_cover[i] = True
 
-    # Jeśli nie wykryto formacji, zwróć False
-    return False
+    return dark_cloud_cover

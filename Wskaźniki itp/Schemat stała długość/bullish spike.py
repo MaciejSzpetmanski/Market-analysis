@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Funkcja wykrywająca formację "bullish spike"
 def wykryj_bullish_spike(dane, stosunek_cienia_do_korpusu=2):
@@ -12,7 +13,9 @@ def wykryj_bullish_spike(dane, stosunek_cienia_do_korpusu=2):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(len(dane)):
+    n = len(dane)
+    bullish_spike = np.full(n, False)
+    for i in range(n):
         swieca = dane.iloc[i]
 
         # Obliczenie wielkości korpusu, górnego i dolnego cienia
@@ -22,6 +25,6 @@ def wykryj_bullish_spike(dane, stosunek_cienia_do_korpusu=2):
 
         # Warunki formacji bullish spike: długi dolny cień i mały korpus oraz brak górnego cienia
         if dolny_cien >= stosunek_cienia_do_korpusu * korpus and gorny_cien <= 0.2 * dolny_cien:
-            return True  # Wykryto formację "bullish spike"
+            bullish_spike[i] = True  # Wykryto formację "bullish spike"
 
-    return False  # Jeśli nie wykryto formacji
+    return bullish_spike

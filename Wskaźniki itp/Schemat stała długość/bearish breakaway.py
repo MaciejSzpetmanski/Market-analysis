@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Funkcja wykrywająca formację "bearish breakaway" w danych cenowych
 def wykryj_bearish_breakaway(dane):
@@ -11,7 +12,9 @@ def wykryj_bearish_breakaway(dane):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(4, len(dane)):
+    n = len(dane)
+    bearish_breakaway = np.full(n, False)
+    for i in range(4, n):
         pierwsza_swieca = dane.iloc[i - 4]
         druga_swieca = dane.iloc[i - 3]
         trzecia_swieca = dane.iloc[i - 2]
@@ -41,7 +44,7 @@ def wykryj_bearish_breakaway(dane):
             continue  # Piąta świeca nie jest spadkowa lub zamknięcie nie jest poniżej pierwszej świecy, pomijamy
 
         # Jeśli wszystkie warunki są spełnione, formacja została wykryta
-        return True
+        bearish_breakaway[i] = True
 
     # Jeśli nie wykryto formacji, zwróć False
-    return False
+    return bearish_breakaway

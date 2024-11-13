@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Funkcja wykrywająca formację "dragonfly doji" w danych cenowych
 def wykryj_dragonfly_doji(dane, doji_procent=0.1):
@@ -12,7 +13,9 @@ def wykryj_dragonfly_doji(dane, doji_procent=0.1):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(len(dane)):
+    n = len(dane)
+    dragonfly_doji = np.full(n, False)
+    for i in range(n):
         swieca = dane.iloc[i]
 
         # Sprawdzenie, czy otwarcie i zamknięcie są bardzo blisko siebie (świeca typu doji)
@@ -31,7 +34,6 @@ def wykryj_dragonfly_doji(dane, doji_procent=0.1):
             continue  # Dolny cień nie jest wystarczająco długi, pomijamy
 
         # Jeśli wszystkie warunki są spełnione, formacja została wykryta
-        return True
+        dragonfly_doji[i] = True
 
-    # Jeśli nie wykryto formacji, zwróć False
-    return False
+    return dragonfly_doji

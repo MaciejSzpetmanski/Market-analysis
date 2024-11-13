@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Funkcja wykrywająca formację "advance block" w danych cenowych
 def wykryj_advance_block(dane):
@@ -11,7 +12,9 @@ def wykryj_advance_block(dane):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(2, len(dane)):
+    n = len(dane)
+    advance_block = np.full(n, False)
+    for i in range(2, n):
         pierwsza_swieca = dane.iloc[i - 2]
         druga_swieca = dane.iloc[i - 1]
         trzecia_swieca = dane.iloc[i]
@@ -39,7 +42,6 @@ def wykryj_advance_block(dane):
             continue  # Cienie górne nie rosną kolejno, pomijamy ten zestaw
 
         # Jeśli wszystkie warunki są spełnione, formacja została wykryta
-        return True
+        advance_block[i] = True
 
-    # Jeśli nie wykryto formacji, zwróć False
-    return False
+    return advance_block

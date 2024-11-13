@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Funkcja wykrywająca formację "gapping down doji"
 def wykryj_gapping_down_doji(dane, doji_procent=0.1):
@@ -12,7 +13,9 @@ def wykryj_gapping_down_doji(dane, doji_procent=0.1):
     Zwraca:
     bool: True, jeśli wykryto formację, False w przeciwnym wypadku.
     """
-    for i in range(1, len(dane)):
+    n = len(dane)
+    gapping_down_doji = np.full(n, False)
+    for i in range(1, n):
         poprzednia_swieca = dane.iloc[i - 1]
         obecna_swieca = dane.iloc[i]
 
@@ -27,8 +30,7 @@ def wykryj_gapping_down_doji(dane, doji_procent=0.1):
             continue  # Brak luki w dół, pomijamy
 
         # Jeśli wszystkie warunki są spełnione, formacja została wykryta
-        return True
+        gapping_down_doji[i] = True
 
-    # Jeśli nie wykryto formacji, zwróć False
-    return False
+    return gapping_down_doji
 
