@@ -3,7 +3,7 @@ import numpy as np
 
 # Funkcja wykrywająca rosnące minima (potencjalny ascending triangle)
 def wykryj_trend_wzrostowy_minima(dane, minimalna_liczba_minimow=3):
-    minima = dane['low'].rolling(window=2).apply(lambda x: x[0] < x[1]).dropna()
+    minima = dane['low'].rolling(window=2).apply(lambda x: x.iloc[0] < x.iloc[1]).dropna().astype(bool)
     rosnace_minima = minima[minima].index
     return len(rosnace_minima) >= minimalna_liczba_minimow
 

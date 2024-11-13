@@ -81,12 +81,26 @@ functions = {name: func for name, func in vars(my_module).items() if callable(fu
 # Now you can access my_function
 my_function = my_module.wykryj_advance_block
 
-res = df.groupby("name", group_keys=False).apply(lambda x: my_function(x))
+# res = df.groupby("name", group_keys=False).apply(lambda x: my_function(x))
 res = np.concatenate([my_function(group) for _, group in df.groupby("name")])
 
 df["advance_block"] = res
 
 my_function(df)
+
+###
+
+file_path = os.path.join(path, 'Wskaźniki itp/Schemat zmienna długość/ascending triangle.py')
+spec = importlib.util.spec_from_file_location("advance_block", file_path)
+my_module = importlib.util.module_from_spec(spec)
+sys.modules["my_module"] = my_module
+spec.loader.exec_module(my_module)
+functions = {name: func for name, func in vars(my_module).items() if callable(func)}
+last_function_name, last_function = list(functions.items())[-1]
+
+res = np.concatenate([last_function(group) for _, group in df.groupby("name")])
+df.groupby("name", group_keys=False).apply(lambda x: last_function(x))
+last_function(df)
 
 #%% represent all prices in dollars
 
