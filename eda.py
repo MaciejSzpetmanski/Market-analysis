@@ -63,44 +63,31 @@ df.info()
 df = df.drop_duplicates()
 df = df.reset_index(drop=True)
 
-#%% formations test
+#%% constant length formations
 
 import importlib.util
 import sys
 
-# Specify the path to the file
-file_path = os.path.join(path, 'Wskaźniki itp/Schemat stała długość/advance block.py')
+functions_path = os.path.join(path, 'Wskaźniki itp/Schemat stała długość')
 
-# Load the module
-spec = importlib.util.spec_from_file_location("advance_block", file_path)
-my_module = importlib.util.module_from_spec(spec)
-sys.modules["my_module"] = my_module
-spec.loader.exec_module(my_module)
+for file_name in os.listdir(functions_path):
+    file_path = os.path.join(functions_path, file_name)
+    if os.path.isfile(file_path) and file_path.endswith(".py"):
+        spec = importlib.util.spec_from_file_location("file_name", file_path)
+        my_module = importlib.util.module_from_spec(spec)
+        sys.modules["my_module"] = my_module
+        spec.loader.exec_module(my_module)
+        
+        functions = {name: func for name, func in vars(my_module).items() if callable(func)}
+        function_name, function = list(functions.items())[-1]
+        
+        column_name = "short_formation_" + function_name.lstrip("wykryj_")
+        df[column_name] = np.concatenate([function(group) for _, group in df.groupby("name")])
 
-functions = {name: func for name, func in vars(my_module).items() if callable(func)}
-# Now you can access my_function
-my_function = my_module.wykryj_advance_block
-
-# res = df.groupby("name", group_keys=False).apply(lambda x: my_function(x))
-res = np.concatenate([my_function(group) for _, group in df.groupby("name")])
-
-df["advance_block"] = res
-
-my_function(df)
-
-###
-
-file_path = os.path.join(path, 'Wskaźniki itp/Schemat zmienna długość/ascending triangle.py')
-spec = importlib.util.spec_from_file_location("advance_block", file_path)
-my_module = importlib.util.module_from_spec(spec)
-sys.modules["my_module"] = my_module
-spec.loader.exec_module(my_module)
-functions = {name: func for name, func in vars(my_module).items() if callable(func)}
-last_function_name, last_function = list(functions.items())[-1]
-
-res = np.concatenate([last_function(group) for _, group in df.groupby("name")])
-df.groupby("name", group_keys=False).apply(lambda x: last_function(x))
-last_function(df)
+for col in df.columns[8:]:
+    print(f"{col}: {len(df[col][df[col] == True])}")
+    
+# no detections of concealing_baby_swallow -> remove?
 
 #%% represent all prices in dollars
 
