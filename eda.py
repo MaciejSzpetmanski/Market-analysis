@@ -63,32 +63,6 @@ df.info()
 df = df.drop_duplicates()
 df = df.reset_index(drop=True)
 
-#%% constant length formations
-
-import importlib.util
-import sys
-
-functions_path = os.path.join(path, 'Wskaźniki itp/Schemat stała długość')
-
-for file_name in os.listdir(functions_path):
-    file_path = os.path.join(functions_path, file_name)
-    if os.path.isfile(file_path) and file_path.endswith(".py"):
-        spec = importlib.util.spec_from_file_location("file_name", file_path)
-        my_module = importlib.util.module_from_spec(spec)
-        sys.modules["my_module"] = my_module
-        spec.loader.exec_module(my_module)
-        
-        functions = {name: func for name, func in vars(my_module).items() if callable(func)}
-        function_name, function = list(functions.items())[-1]
-        
-        column_name = "short_formation_" + function_name.lstrip("wykryj_")
-        df[column_name] = np.concatenate([function(group) for _, group in df.groupby("name")])
-
-for col in df.columns[8:]:
-    print(f"{col}: {len(df[col][df[col] == True])}")
-    
-# no detections of concealing_baby_swallow -> remove?
-
 #%% represent all prices in dollars
 
 # counting GBPUSD
@@ -169,6 +143,7 @@ split_date = last_date - pd.DateOffset(years=1)
 df_train = df[df['date'] <= split_date]
 df_train.shape
 
+# OPTIONAL cgange sizes
 # stratify by date (day-month-year)
 df_val, df_test = train_test_split(df[df['date'] > split_date], test_size=0.6, random_state=42, stratify=df[df['date'] > split_date]['date'])
 
@@ -184,9 +159,54 @@ print(f'train: {df_train.shape}')
 print(f'val: {df_val.shape}')
 print(f'test: {df_test.shape}')
 
-#%% creating new columns
+#%% constant length formations
 
-# TODO fractals
+import importlib.util
+# import sys
+
+# OPTIONAL the most expensive part -> multi-threading (for each function)
+
+def add_fractal_schemas(df, path, group_by_column, prefix):
+    for file_name in os.listdir(path):
+        file_path = os.path.join(path, file_name)
+        if os.path.isfile(file_path) and file_path.endswith(".py"):
+            spec = importlib.util.spec_from_file_location("file_name", file_path)
+            my_module = importlib.util.module_from_spec(spec)
+            # sys.modules["my_module"] = my_module
+            spec.loader.exec_module(my_module)
+            
+            functions = {name: func for name, func in vars(my_module).items() if callable(func)}
+            # selecting the last function from script
+            function_name, function = list(functions.items())[-1]
+            
+            column_name = prefix + function_name.lstrip("wykryj_")
+            df[column_name] = np.concatenate([function(group) for _, group in df.groupby(group_by_column)]).astype(int)
+    return df
+
+df_train
+functions_path = os.path.join(path, 'Wskaźniki itp/Schemat stała długość')
+group_by_column = 'name'
+# OPTIONAL warnings
+add_fractal_schemas(df_train, functions_path, group_by_column, 'short_formation_')
+add_fractal_schemas(df_val, functions_path, group_by_column, 'short_formation_')
+add_fractal_schemas(df_test, functions_path, group_by_column, 'short_formation_')
+
+for col in df_train.columns[53:]:
+    print(f"{col}: {len(df_train[col][df_train[col] == True])}")
+# TODO no detections of concealing_baby_swallow -> remove
+
+#%% mutable length formations
+
+# TODO
+# 2 possibilities
+# modify functions to return vectors (indexes and setting window parameter)
+# or specify window N (don't have to be the same as in time-series) in code
+# and apply function several times for each group's window
+
+#%% adjusted_close and close comparison
+
+df_train.groupby("name").apply(lambda x: (x.adjusted_close == x.close).sum() / len(x))
+# TODO in most groups adjusted_close is equal to close -> drop
 
 #%% correlation - pearson
 
@@ -205,10 +225,18 @@ threshold1 = 0.8
 threshold2 = 1
 
 res = corr_matrix\
+    .where(lambda x: np.fromfunction(lambda i, j: i < j, x.shape))\
     .where(lambda x: (abs(x) > threshold1) & (abs(x) < threshold2))\
     .stack().reset_index()\
     .rename(columns={'level_0': 'Feature1', 'level_1': 'Feature2', 0: 'Correlation'})
-res.loc[res.Feature1 != res.Feature2]
+    
+pd.set_option('display.expand_frame_repr', False)
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
+print(res.sort_values("Correlation", ascending=False))
+pd.reset_option('display.expand_frame_repr')
+pd.reset_option('display.max_columns')
+pd.reset_option('display.width')
 
 # date columns have high correlation with each other
 
@@ -281,16 +309,16 @@ output_path = "plots/boxplots"
 
 draw_boxplots(df_train, box_columns, "name", output_path)
 
-#%% transformations
-
-
 #%% standarization
 
 df_train.info()
 
 from sklearn.preprocessing import StandardScaler
 
-columns_to_standarize = ["close", "high", "low", "open", "volume"]
+# TODO adjusted_close
+columns_to_standarize = ["adjusted_close", "close", "high", "low", "open", "volume"]
+
+# TODO Volume scaling strategy - it has wider distribution
 # cast Volume to float before scaling
 # possibly apply ln(x+1) or MinMaxScaler
 
@@ -326,7 +354,7 @@ AAPL_original.shape
 
 #%% scaling remaining columns
 
-# drop Timestamp (but it enables more accurate prediction - to hours/minutes/...)
+# TODO scale or not (which columns?)
 # MinMaxScaling
 # sine and cosine transformation - cyclic features
 # or leave as it is
@@ -350,33 +378,57 @@ df_train.info()
 
 #%% preparing data as time series
 
-def create_time_series(data, columns, group_by_column, target_column, sort_columns, n):
+# TODO test after adding all fractal columns
+
+def create_time_series(data, columns, group_by_column, target_column, sort_columns, n, k=1):
+    """
+    n - time series length
+    k - target horizon
+    """
     # setting chronological order
     data = data.sort_values(by=[group_by_column] + sort_columns)
     shifted_columns = {}
-    # index _(N-1) is the latest data
+    # index _(n-1) is the latest data
     for i in range(1, n):
         for col in columns:
             shifted_columns[col + "_" + str(i)] = data.groupby(group_by_column, group_keys=False)[col].shift(-i)
+    # target date
+    date_columns = [col for col in columns if col.startswith("date")]
+    for col in date_columns:
+        shifted_columns[col + "_y"] = data.groupby(group_by_column, group_keys=False)[col].shift(-(n-1+k))
     # target column
-    shifted_columns["y"] = data.groupby(group_by_column, group_keys=False)[target_column].shift(-N)
-    data = pd.concat([data] + [pd.Series(value, name=key) for key, value in shifted_columns.items()], axis=1)
+    shifted_columns["y"] = data.groupby(group_by_column, group_keys=False)[target_column].shift(-(n-1+k))
+    # collect columns - include all original columns
+    res_data = pd.concat([data] + [pd.Series(value, name=key) for key, value in shifted_columns.items()], axis=1)
     # removing rows with missing values
-    data = data.groupby(group_by_column, group_keys=False).head(-N)
-    return data
+    res_data = res_data.groupby(group_by_column, group_keys=False).head(-(n-1+k))
+    return res_data
 
-# omit Names
+
+def create_wide_horizon_time_series(data, columns, group_by_column, target_column, sort_columns, n, max_target_horizon):
+    df_full = None
+    for k in range(max_target_horizon):
+        df = create_time_series(data, columns, group_by_column, target_column, sort_columns, n, k)
+        df_full = pd.concat([df_full, df])
+    return df_full
+
+# omit Names and dates
+# volume ?
 columns = [col for col in df_train.columns if not col.startswith("name")] # cols to shift
 group_by_column = "name"
 target_column = "close"
 sort_columns = ["date_year", "date_month", "date_day_of_month"]
-N = 20
+n = 20
+max_target_horizon = 3
 
-# strange indexes
-# OPTIONAL reset index
-df_train = create_time_series(df_train, columns, group_by_column, target_column, sort_columns, N)
-df_val = create_time_series(df_val, columns, group_by_column, target_column, sort_columns, N)
-df_test = create_time_series(df_test, columns, group_by_column, target_column, sort_columns, N)
+df_train = create_wide_horizon_time_series(df_train, columns, group_by_column, target_column, sort_columns, n, max_target_horizon)
+df_val = create_wide_horizon_time_series(df_val, columns, group_by_column, target_column, sort_columns, n, max_target_horizon)
+df_test = create_wide_horizon_time_series(df_test, columns, group_by_column, target_column, sort_columns, n, max_target_horizon)
+
+# reset index
+df_train = df_train.reset_index(drop=True)
+df_val = df_val.reset_index(drop=True)
+df_test = df_test.reset_index(drop=True)
 
 #%% identify target column
 
@@ -391,10 +443,9 @@ with warnings.catch_warnings():
 
 #%%
 
-# TODO once again check boxplots, histograms, correlation, pair-plots
+# OPTIONAL once again check boxplots, histograms, correlation, pair-plots
 
 #%%
 
-# outliers
-# additional columns
 # pca (high correlation) ?
+# model
