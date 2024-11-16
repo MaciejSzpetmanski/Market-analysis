@@ -46,7 +46,3 @@ def wykryj_potrojne_dno(dane, odleglosc_dolkow=5, tolerancja_dolkow=0.02):
 
     # Jeśli nie wykryto formacji "triple bottom", zwróć False
     return False
-
-# Sprawdzenie, czy w danych występuje formacja "triple bottom"
-wynik = wykryj_potrojne_dno(dane)
-print("Czy wykryto formację 'triple bottom'? :", wynik)

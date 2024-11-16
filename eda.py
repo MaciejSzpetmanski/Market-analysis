@@ -162,17 +162,15 @@ print(f'test: {df_test.shape}')
 #%% constant length formations
 
 import importlib.util
-# import sys
 
 # OPTIONAL the most expensive part -> multi-threading (for each function)
 
-def add_fractal_schemas(df, path, group_by_column, prefix):
+def add_fractal_short_schemas(df, path, group_by_column, prefix):
     for file_name in os.listdir(path):
         file_path = os.path.join(path, file_name)
         if os.path.isfile(file_path) and file_path.endswith(".py"):
             spec = importlib.util.spec_from_file_location("file_name", file_path)
             my_module = importlib.util.module_from_spec(spec)
-            # sys.modules["my_module"] = my_module
             spec.loader.exec_module(my_module)
             
             functions = {name: func for name, func in vars(my_module).items() if callable(func)}
@@ -180,16 +178,16 @@ def add_fractal_schemas(df, path, group_by_column, prefix):
             function_name, function = list(functions.items())[-1]
             
             column_name = prefix + function_name.lstrip("wykryj_")
+            # TODO warnings
             df[column_name] = np.concatenate([function(group) for _, group in df.groupby(group_by_column)]).astype(int)
     return df
 
-df_train
 functions_path = os.path.join(path, 'Wskaźniki itp/Schemat stała długość')
 group_by_column = 'name'
-# OPTIONAL warnings
-add_fractal_schemas(df_train, functions_path, group_by_column, 'short_formation_')
-add_fractal_schemas(df_val, functions_path, group_by_column, 'short_formation_')
-add_fractal_schemas(df_test, functions_path, group_by_column, 'short_formation_')
+
+add_fractal_short_schemas(df_train, functions_path, group_by_column, 'short_formation_')
+add_fractal_short_schemas(df_val, functions_path, group_by_column, 'short_formation_')
+add_fractal_short_schemas(df_test, functions_path, group_by_column, 'short_formation_')
 
 for col in df_train.columns[53:]:
     print(f"{col}: {len(df_train[col][df_train[col] == True])}")
@@ -197,16 +195,52 @@ for col in df_train.columns[53:]:
 
 #%% mutable length formations
 
-# TODO
-# 2 possibilities
-# modify functions to return vectors (indexes and setting window parameter)
-# or specify window N (don't have to be the same as in time-series) in code
-# and apply function several times for each group's window
+def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
+    for file_name in os.listdir(path):
+        file_path = os.path.join(path, file_name)
+        if os.path.isfile(file_path) and file_path.endswith(".py"):
+            spec = importlib.util.spec_from_file_location("file_name", file_path)
+            my_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(my_module)
+            
+            functions = {name: func for name, func in vars(my_module).items() if callable(func)}
+            # selecting the last function from script
+            function_name, function = list(functions.items())[-1]
+            
+            def apply_function(df, function, group_by_column, width):
+                n = len(df)
+                res = np.full(n, False)
+                for i in range(width-1, n):
+                    data = df_train[i+1-width:i+1]
+                    res[i] = function(data)
+                return res
+            
+            column_name = prefix + function_name.lstrip("wykryj_")
+            # TODO warnings
+            df[column_name] = np.concatenate([apply_function(group, function, group_by_column, width) for _, group in df.groupby(group_by_column)]).astype(int)
+    return df
+
+functions_path = os.path.join(path, 'Wskaźniki itp/Schemat zmienna długość')
+group_by_column = 'name'
+width = 20
+
+add_fractal_long_schemas(df_train, functions_path, group_by_column, 'long_formation_', width)
+# TODO apply to val and test sets
+
+for col in df_train.columns[53:]:
+    print(f"{col}: {len(df_train[col][df_train[col] == True])}")
+
+# for width=20 death_cross, exhaustion_gap, golden_cross, unaway_gap were not detected
+# TODO remove these features or check other widths
+
+#%% 
+
+#TODO add cykl.py
 
 #%% adjusted_close and close comparison
 
 df_train.groupby("name").apply(lambda x: (x.adjusted_close == x.close).sum() / len(x))
-# TODO in most groups adjusted_close is equal to close -> drop
+# TODO in most groups adjusted_close is equal to close, in actions there is significant difference
 
 #%% correlation - pearson
 
@@ -336,7 +370,7 @@ for name, group in df_val.groupby('name'):
     scaler = scalers[name]
     scaled_values = scaler.transform(group[columns_to_standarize])
     df_val.loc[df_val['name'] == name, columns_to_standarize] = scaled_values
-    
+
 # test
 for name, group in df_test.groupby('name'):
     scaler = scalers[name]
@@ -447,5 +481,6 @@ with warnings.catch_warnings():
 
 #%%
 
+# TODO add description of functions
 # pca (high correlation) ?
 # model

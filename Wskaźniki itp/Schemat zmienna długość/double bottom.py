@@ -39,7 +39,3 @@ def wykryj_podwojne_dno(dane, odleglosc_dolkow=5, tolerancja_dolkow=0.02):
 
     # Jeśli nie wykryto formacji "double bottom", zwróć False
     return False
-
-# Sprawdzenie, czy w danych występuje formacja "double bottom"
-wynik = wykryj_podwojne_dno(dane)
-print("Czy wykryto formację 'double bottom'? :", wynik)

@@ -39,7 +39,3 @@ def wykryj_podwojny_szczyt(dane, odleglosc_szczytow=5, tolerancja_szczytow=0.02)
 
     # Jeśli nie wykryto formacji "double top", zwróć False
     return False
-
-# Sprawdzenie, czy w danych występuje formacja "double top"
-wynik = wykryj_podwojny_szczyt(dane)
-print("Czy wykryto formację 'double top'? :", wynik)

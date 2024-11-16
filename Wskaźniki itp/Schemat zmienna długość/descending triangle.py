@@ -3,7 +3,7 @@ import numpy as np
 
 # Funkcja wykrywająca malejące maksima (potencjalny descending triangle)
 def wykryj_trend_spadkowy_maksima(dane, minimalna_liczba_maksimow=3):
-    maksima = dane['high'].rolling(window=2).apply(lambda x: x[0] > x[1]).dropna()
+    maksima = dane['high'].rolling(window=2).apply(lambda x: x.iloc[0] > x.iloc[1]).dropna().astype(bool)
     malejace_maksima = maksima[maksima].index
     return len(malejace_maksima) >= minimalna_liczba_maksimow
 

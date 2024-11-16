@@ -39,7 +39,3 @@ def wykryj_glowe_i_ramiona(dane, odleglosc_szczytow=5, tolerancja_ramion=0.05, m
 
     # Jeśli żaden wzór nie spełnia warunków "Head and Shoulders", zwróć False
     return False
-
-# Sprawdzenie, czy w danych występuje formacja "Head and Shoulders"
-wynik = wykryj_glowe_i_ramiona(dane)
-print("Czy wykryto formację 'Head and Shoulders'? :", wynik)

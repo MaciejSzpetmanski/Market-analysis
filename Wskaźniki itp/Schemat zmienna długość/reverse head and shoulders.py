@@ -39,7 +39,3 @@ def wykryj_odwrocona_glowe_i_ramiona(dane, odleglosc_dolin=5, tolerancja_ramion=
 
     # Jeśli żaden wzór nie spełnia warunków "reverse Head and Shoulders", zwróć False
     return False
-
-# Sprawdzenie, czy w danych występuje formacja odwróconej "Head and Shoulders"
-wynik = wykryj_odwrocona_glowe_i_ramiona(dane)
-print("Czy wykryto formację odwróconej 'Head and Shoulders'? :", wynik)

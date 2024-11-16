@@ -46,7 +46,3 @@ def wykryj_potrojny_szczyt(dane, odleglosc_szczytow=5, tolerancja_szczytow=0.02)
 
     # Jeśli nie wykryto formacji "triple top", zwróć False
     return False
-
-# Sprawdzenie, czy w danych występuje formacja "triple top"
-wynik = wykryj_potrojny_szczyt(dane)
-print("Czy wykryto formację 'triple top'? :", wynik)
