@@ -159,9 +159,95 @@ print(f'train: {df_train.shape}')
 print(f'val: {df_val.shape}')
 print(f'test: {df_test.shape}')
 
-#%% constant length formations
+#%% mutable length formations
 
 import importlib.util
+from concurrent.futures import ThreadPoolExecutor
+
+def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
+    def apply_function(df, function, group_by_column, width):
+        n = len(df)
+        res = np.full(n, False)
+        for i in range(width-1, n):
+            data = df_train[i+1-width:i+1]
+            res[i] = function(data)
+        return res
+
+    for file_name in os.listdir(path):
+        file_path = os.path.join(path, file_name)
+        if os.path.isfile(file_path) and file_path.endswith(".py"):
+            spec = importlib.util.spec_from_file_location("file_name", file_path)
+            my_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(my_module)
+            
+            functions = {name: func for name, func in vars(my_module).items() if callable(func)}
+            # selecting the last function from script
+            function_name, function = list(functions.items())[-1]
+            
+            column_name = prefix + function_name.lstrip("wykryj_")
+            # TODO warnings
+            # TODO add columns like in time-series
+            # res_data = pd.concat([data] + [pd.Series(value, name=key) for key, value in shifted_columns.items()], axis=1)
+            df[column_name] = np.concatenate([apply_function(group, function, group_by_column, width) for _, group in df.groupby(group_by_column)]).astype(int)
+    return df
+
+functions_path = os.path.join(path, 'Wskaźniki itp/Schemat zmienna długość')
+group_by_column = 'name'
+width = 20
+
+add_fractal_long_schemas(df_train, functions_path, group_by_column, 'long_formation_', width)
+add_fractal_long_schemas(df_val, functions_path, group_by_column, 'long_formation_', width)
+add_fractal_long_schemas(df_test, functions_path, group_by_column, 'long_formation_', width)
+
+for col in df_train.columns[53:]:
+    print(f"{col}: {len(df_train[col][df_train[col] == True])}")
+
+# for width=20 death_cross, exhaustion_gap, golden_cross, unaway_gap were not detected
+# TODO remove these features or check other widths
+
+#%% cycle
+
+import sys
+
+sys.path.append(os.path.abspath("Wskaźniki itp"))
+from cykl import wykryj_typ_cyklu
+
+def add_cycle_columns(df, group_by_column, width):
+    def apply_cycle_function(df, group_by_column, width):
+        n = len(df)
+        res = np.full(n, "", dtype=object)
+        for i in range(width-1, n):
+            data = df_train[i+1-width:i+1]
+            # get cycle name only
+            res[i] = wykryj_typ_cyklu(data)[1]
+        return res
+    
+    cycle_names = {
+       "Cykl Neutralny": "neutral",
+       "Cykl Zbieżny": "convergent",
+       "Cykl Rozbieżny": "divergent",
+       "": "not_detected"
+    }
+    
+    # TODO warnings
+    df["cycle"] = np.concatenate([apply_cycle_function(group, group_by_column, width) for _, group in df.groupby(group_by_column)])
+    df["cycle"] = df["cycle"].apply(lambda x: cycle_names[x])
+
+    # one-hot encoding
+    df = pd.get_dummies(df, columns=["cycle"], prefix="cycle",  dtype=int)
+    return df
+
+
+group_by_column = "name"
+width = 20
+
+df_train = add_cycle_columns(df_train, group_by_column, width)
+df_val = add_cycle_columns(df_val, group_by_column, width)
+df_test = add_cycle_columns(df_test, group_by_column, width)
+
+# all values are present in df_train
+
+#%% constant length formations
 
 # OPTIONAL the most expensive part -> multi-threading (for each function)
 
@@ -192,50 +278,6 @@ add_fractal_short_schemas(df_test, functions_path, group_by_column, 'short_forma
 for col in df_train.columns[53:]:
     print(f"{col}: {len(df_train[col][df_train[col] == True])}")
 # TODO no detections of concealing_baby_swallow -> remove
-
-#%% mutable length formations
-
-def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
-    for file_name in os.listdir(path):
-        file_path = os.path.join(path, file_name)
-        if os.path.isfile(file_path) and file_path.endswith(".py"):
-            spec = importlib.util.spec_from_file_location("file_name", file_path)
-            my_module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(my_module)
-            
-            functions = {name: func for name, func in vars(my_module).items() if callable(func)}
-            # selecting the last function from script
-            function_name, function = list(functions.items())[-1]
-            
-            def apply_function(df, function, group_by_column, width):
-                n = len(df)
-                res = np.full(n, False)
-                for i in range(width-1, n):
-                    data = df_train[i+1-width:i+1]
-                    res[i] = function(data)
-                return res
-            
-            column_name = prefix + function_name.lstrip("wykryj_")
-            # TODO warnings
-            df[column_name] = np.concatenate([apply_function(group, function, group_by_column, width) for _, group in df.groupby(group_by_column)]).astype(int)
-    return df
-
-functions_path = os.path.join(path, 'Wskaźniki itp/Schemat zmienna długość')
-group_by_column = 'name'
-width = 20
-
-add_fractal_long_schemas(df_train, functions_path, group_by_column, 'long_formation_', width)
-# TODO apply to val and test sets
-
-for col in df_train.columns[53:]:
-    print(f"{col}: {len(df_train[col][df_train[col] == True])}")
-
-# for width=20 death_cross, exhaustion_gap, golden_cross, unaway_gap were not detected
-# TODO remove these features or check other widths
-
-#%% 
-
-#TODO add cykl.py
 
 #%% adjusted_close and close comparison
 
