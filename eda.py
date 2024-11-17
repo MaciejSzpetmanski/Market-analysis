@@ -143,7 +143,7 @@ split_date = last_date - pd.DateOffset(years=1)
 df_train = df[df['date'] <= split_date]
 df_train.shape
 
-# OPTIONAL cgange sizes
+# OPTIONAL change sizes
 # stratify by date (day-month-year)
 df_val, df_test = train_test_split(df[df['date'] > split_date], test_size=0.6, random_state=42, stratify=df[df['date'] > split_date]['date'])
 
@@ -162,7 +162,9 @@ print(f'test: {df_test.shape}')
 #%% mutable length formations
 
 import importlib.util
-from concurrent.futures import ThreadPoolExecutor
+import threading
+
+# TODO the code works longer with threads -> try importing functions in a normal way
 
 def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
     def apply_function(df, function, group_by_column, width):
@@ -172,7 +174,16 @@ def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
             data = df_train[i+1-width:i+1]
             res[i] = function(data)
         return res
+    
+    # def compute_column(df, new_columns, column_name, group_by_column, function, width):
+    #     with warnings.catch_warnings():
+    #         warnings.simplefilter("ignore", pd.errors.SettingWithCopyWarning)
+    #         new_columns[column_name] = np.concatenate([
+    #             apply_function(group, function, group_by_column, width) for _, group in df.groupby(group_by_column)
+    #         ]).astype(int)
 
+    new_columns = {}
+    # threads = []
     for file_name in os.listdir(path):
         file_path = os.path.join(path, file_name)
         if os.path.isfile(file_path) and file_path.endswith(".py"):
@@ -185,19 +196,35 @@ def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
             function_name, function = list(functions.items())[-1]
             
             column_name = prefix + function_name.lstrip("wykryj_")
-            # TODO warnings
-            # TODO add columns like in time-series
-            # res_data = pd.concat([data] + [pd.Series(value, name=key) for key, value in shifted_columns.items()], axis=1)
-            df[column_name] = np.concatenate([apply_function(group, function, group_by_column, width) for _, group in df.groupby(group_by_column)]).astype(int)
-    return df
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", pd.errors.SettingWithCopyWarning)
+                ###
+                # t = threading.Thread(target=compute_column, args=(df, new_columns, column_name, group_by_column, function, width))
+                # threads.append(t)
+                new_columns[column_name] = np.concatenate([apply_function(group, function, group_by_column, width) for _, group in df.groupby(group_by_column)]).astype(int)
+    # for t in threads:
+    #     t.start()
+    # for t in threads:
+    #     t.join()
+    res_data = pd.concat([df.reset_index(drop=True)] + [pd.Series(value, name=key) for key, value in new_columns.items()], axis=1)
+    return res_data
 
 functions_path = os.path.join(path, 'Wskaźniki itp/Schemat zmienna długość')
 group_by_column = 'name'
 width = 20
 
-add_fractal_long_schemas(df_train, functions_path, group_by_column, 'long_formation_', width)
-add_fractal_long_schemas(df_val, functions_path, group_by_column, 'long_formation_', width)
-add_fractal_long_schemas(df_test, functions_path, group_by_column, 'long_formation_', width)
+import time
+
+start_time = time.time()
+
+df_train = add_fractal_long_schemas(df_train, functions_path, group_by_column, 'long_formation_', width)
+df_val = add_fractal_long_schemas(df_val, functions_path, group_by_column, 'long_formation_', width)
+df_test = add_fractal_long_schemas(df_test, functions_path, group_by_column, 'long_formation_', width)
+
+end_time = time.time()
+
+elapsed_time = end_time - start_time
+print(f"Execution time: {elapsed_time:.2f} seconds")
 
 for col in df_train.columns[53:]:
     print(f"{col}: {len(df_train[col][df_train[col] == True])}")
