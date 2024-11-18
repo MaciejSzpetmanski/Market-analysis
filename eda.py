@@ -164,8 +164,6 @@ print(f'test: {df_test.shape}')
 import importlib.util
 import threading
 
-# TODO the code works longer with threads -> try importing functions in a normal way
-
 def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
     def apply_function(df, function, group_by_column, width):
         n = len(df)
@@ -174,16 +172,8 @@ def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
             data = df_train[i+1-width:i+1]
             res[i] = function(data)
         return res
-    
-    # def compute_column(df, new_columns, column_name, group_by_column, function, width):
-    #     with warnings.catch_warnings():
-    #         warnings.simplefilter("ignore", pd.errors.SettingWithCopyWarning)
-    #         new_columns[column_name] = np.concatenate([
-    #             apply_function(group, function, group_by_column, width) for _, group in df.groupby(group_by_column)
-    #         ]).astype(int)
 
     new_columns = {}
-    # threads = []
     for file_name in os.listdir(path):
         file_path = os.path.join(path, file_name)
         if os.path.isfile(file_path) and file_path.endswith(".py"):
@@ -198,14 +188,7 @@ def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
             column_name = prefix + function_name.lstrip("wykryj_")
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", pd.errors.SettingWithCopyWarning)
-                ###
-                # t = threading.Thread(target=compute_column, args=(df, new_columns, column_name, group_by_column, function, width))
-                # threads.append(t)
                 new_columns[column_name] = np.concatenate([apply_function(group, function, group_by_column, width) for _, group in df.groupby(group_by_column)]).astype(int)
-    # for t in threads:
-    #     t.start()
-    # for t in threads:
-    #     t.join()
     res_data = pd.concat([df.reset_index(drop=True)] + [pd.Series(value, name=key) for key, value in new_columns.items()], axis=1)
     return res_data
 
@@ -226,8 +209,9 @@ end_time = time.time()
 elapsed_time = end_time - start_time
 print(f"Execution time: {elapsed_time:.2f} seconds")
 
-for col in df_train.columns[53:]:
-    print(f"{col}: {len(df_train[col][df_train[col] == True])}")
+for col in df_train.columns:
+    if col.startswith("long_formation_"):
+        print(f"{col}: {len(df_train[col][df_train[col] == True])}")
 
 # for width=20 death_cross, exhaustion_gap, golden_cross, unaway_gap were not detected
 # TODO remove these features or check other widths
@@ -277,8 +261,10 @@ df_test = add_cycle_columns(df_test, group_by_column, width)
 #%% constant length formations
 
 # OPTIONAL the most expensive part -> multi-threading (for each function)
+# TODO reset index outside functions
 
 def add_fractal_short_schemas(df, path, group_by_column, prefix):
+    new_columns = {}
     for file_name in os.listdir(path):
         file_path = os.path.join(path, file_name)
         if os.path.isfile(file_path) and file_path.endswith(".py"):
@@ -291,20 +277,36 @@ def add_fractal_short_schemas(df, path, group_by_column, prefix):
             function_name, function = list(functions.items())[-1]
             
             column_name = prefix + function_name.lstrip("wykryj_")
+            
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", pd.errors.SettingWithCopyWarning)
+                new_columns[column_name] = np.concatenate([function(group) for _, group in df.groupby(group_by_column)]).astype(int)
+            
             # TODO warnings
-            df[column_name] = np.concatenate([function(group) for _, group in df.groupby(group_by_column)]).astype(int)
-    return df
+            # df[column_name] = np.concatenate([function(group) for _, group in df.groupby(group_by_column)]).astype(int)
+    # return df
+    res_data = pd.concat([df.reset_index(drop=True)] + [pd.Series(value, name=key) for key, value in new_columns.items()], axis=1)
+    return res_data
 
 functions_path = os.path.join(path, 'Wskaźniki itp/Schemat stała długość')
 group_by_column = 'name'
 
-add_fractal_short_schemas(df_train, functions_path, group_by_column, 'short_formation_')
-add_fractal_short_schemas(df_val, functions_path, group_by_column, 'short_formation_')
-add_fractal_short_schemas(df_test, functions_path, group_by_column, 'short_formation_')
+df_train = add_fractal_short_schemas(df_train, functions_path, group_by_column, 'short_formation_')
+df_val = add_fractal_short_schemas(df_val, functions_path, group_by_column, 'short_formation_')
+df_test = add_fractal_short_schemas(df_test, functions_path, group_by_column, 'short_formation_')
 
-for col in df_train.columns[53:]:
-    print(f"{col}: {len(df_train[col][df_train[col] == True])}")
+for col in df_train.columns:
+    if col.startswith("short_formation_"):
+        print(f"{col}: {len(df_train[col][df_train[col] == True])}")
 # TODO no detections of concealing_baby_swallow -> remove
+
+#%% removing empty columns
+
+columns_to_remove = [col for col in df_train.columns if df_train[col].nunique() == 1]
+
+df_train = df_train.drop(columns=columns_to_remove)
+df_val = df_val.drop(columns=columns_to_remove)
+df_test = df_test.drop(columns=columns_to_remove)
 
 #%% adjusted_close and close comparison
 
@@ -539,10 +541,30 @@ y_train = df_train["y"]
 y_val = df_val["y"]
 y_test = df_test["y"]
 
+# TODO change inplace
+
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", Warning)
     for data in [df_train, df_val, df_test]:
         data.drop(columns=["y"], inplace=True)
+
+#%% drop name
+
+df_train = df_train.drop(columns=["name"])
+df_val = df_val.drop(columns=["name"])
+df_test = df_test.drop(columns=["name"])
+
+#%% save data
+
+df_train.to_csv("datasets/df_train.csv", index=False)
+y_train.to_csv("datasets/y_train.csv", index=False)
+
+df_val.to_csv("datasets/df_val.csv", index=False)
+y_val.to_csv("datasets/y_val.csv", index=False)
+
+df_test.to_csv("datasets/df_test.csv", index=False)
+y_test.to_csv("datasets/y_test.csv", index=False)
+
 
 #%%
 
