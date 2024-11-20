@@ -65,20 +65,25 @@ df = df.reset_index(drop=True)
 
 #%% represent all prices in dollars
 
+# GBP already exists in data -> "EURGBP=X" is useless
+df[df.name == "GBPUSD=X"]
+
 # counting GBPUSD
-eurusd_df = df[df.name == "EURUSD=X"][["date"] + float_columns]
-eurgbp_df = df[df.name == "EURGBP=X"][["date", "volume"] + float_columns]
+# [1759 rows x 8 columns]
+# [52828 rows x 8 columns]
+# eurusd_df = df[df.name == "EURUSD=X"][["date"] + float_columns]
+# eurgbp_df = df[df.name == "EURGBP=X"][["date", "volume"] + float_columns]
 
-merged_df = pd.merge(eurusd_df, eurgbp_df, on="date", how="inner")
+# merged_df = pd.merge(eurusd_df, eurgbp_df, on="date", how="inner")
 
-for col in float_columns:
-    merged_df[col] = merged_df[col+"_x"] / merged_df[col+"_y"]
+# for col in float_columns:
+#     merged_df[col] = merged_df[col+"_x"] / merged_df[col+"_y"]
 
-merged_df["name"] = "GBPUSD=X"
-merged_df = merged_df[df.columns]
-df = pd.concat([df, merged_df], ignore_index=True)
+# merged_df["name"] = "GBPUSD=X"
+# merged_df = merged_df[df.columns]
+# df = pd.concat([df, merged_df], ignore_index=True)
 
-# remove EURGBP
+# # remove EURGBP
 df = df[~(df.name == "EURGBP=X")]
 df = df.reset_index(drop=True)
 
@@ -107,6 +112,15 @@ df['date'] = date
 
 df.info()
 
+#%% checking time
+
+for name, group in df.groupby("name"):
+    print(name)
+    # print(f"{group.date.value_counts()}")
+    print(f"unique dates: {group.date.nunique()}")
+    print(f"all dates: {len(group)}")
+    print(f"all dates: {group.date.nunique() / len(group)}")
+    
 #%% identify useless columns (it may differ based on basic frequency)
 
 # TODO identify useless columns - fractals
@@ -509,10 +523,9 @@ def create_time_series(data, columns, group_by_column, target_column, sort_colum
     res_data = res_data.groupby(group_by_column, group_keys=False).head(-(n-1+k))
     return res_data
 
-
 def create_wide_horizon_time_series(data, columns, group_by_column, target_column, sort_columns, n, max_target_horizon):
     df_full = None
-    for k in range(max_target_horizon):
+    for k in range(1, max_target_horizon + 1):
         df = create_time_series(data, columns, group_by_column, target_column, sort_columns, n, k)
         df_full = pd.concat([df_full, df])
     return df_full
