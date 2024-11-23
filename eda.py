@@ -121,9 +121,7 @@ for name, group in df.groupby("name"):
     print(f"all dates: {len(group)}")
     print(f"all dates: {group.date.nunique() / len(group)}")
     
-#%% identify useless columns (it may differ based on basic frequency)
-
-# TODO identify useless columns - fractals
+#%% identify useless columns
 
 for col in df.columns:
     print(f"{col}: {len(df[col].unique())}")
@@ -133,9 +131,6 @@ df.date_year_end.value_counts()
 df.date_weekend.value_counts() # there is some data from weekend
 df[df.date_weekend == 1]["name"] # crypto
 
-# cols_to_remove = ["Freq", "Date_hour", "Date_minute", "Date_second"] # Freq, if only one frequency is used
-# possibly remove these columns earlier
-# df = df.drop(columns=cols_to_remove)
 
 #%% name encoding (one-hot)
 
@@ -173,6 +168,10 @@ print(f'train: {df_train.shape}')
 print(f'val: {df_val.shape}')
 print(f'test: {df_test.shape}')
 
+#%% reset index
+
+# TODO reset and remove reset from functions below
+
 #%% mutable length formations
 
 import importlib.util
@@ -207,6 +206,7 @@ def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
     return res_data
 
 functions_path = os.path.join(path, 'Wskaźniki itp/Schemat zmienna długość')
+functions_path = 'Wskaźniki itp/Schemat zmienna długość'
 group_by_column = 'name'
 width = 20
 
@@ -228,7 +228,7 @@ for col in df_train.columns:
         print(f"{col}: {len(df_train[col][df_train[col] == True])}")
 
 # for width=20 death_cross, exhaustion_gap, golden_cross, unaway_gap were not detected
-# TODO remove these features or check other widths
+# remove these features or check other widths
 
 #%% cycle
 
@@ -272,9 +272,24 @@ df_test = add_cycle_columns(df_test, group_by_column, width)
 
 # all values are present in df_train
 
+#%% ema
+
+from EMA import ema
+
+def add_ema_columns(df, group_by_column, period):
+    df[f"ema_{period}"] = np.concatenate([ema(group.close, period) for _, group in df.groupby(group_by_column)])
+    return df
+
+group_by_column = "name"
+ema_periods = [10, 20, 50, 100, 200]
+
+for period in ema_periods:
+    df_train = add_ema_columns(df_train, group_by_column, period)
+    df_val = add_ema_columns(df_val, group_by_column, period)
+    df_test = add_ema_columns(df_test, group_by_column, period)
+    
 #%% constant length formations
 
-# OPTIONAL the most expensive part -> multi-threading (for each function)
 # TODO reset index outside functions
 
 def add_fractal_short_schemas(df, path, group_by_column, prefix):
@@ -295,10 +310,7 @@ def add_fractal_short_schemas(df, path, group_by_column, prefix):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", pd.errors.SettingWithCopyWarning)
                 new_columns[column_name] = np.concatenate([function(group) for _, group in df.groupby(group_by_column)]).astype(int)
-            
-            # TODO warnings
-            # df[column_name] = np.concatenate([function(group) for _, group in df.groupby(group_by_column)]).astype(int)
-    # return df
+
     res_data = pd.concat([df.reset_index(drop=True)] + [pd.Series(value, name=key) for key, value in new_columns.items()], axis=1)
     return res_data
 
@@ -312,7 +324,7 @@ df_test = add_fractal_short_schemas(df_test, functions_path, group_by_column, 's
 for col in df_train.columns:
     if col.startswith("short_formation_"):
         print(f"{col}: {len(df_train[col][df_train[col] == True])}")
-# TODO no detections of concealing_baby_swallow -> remove
+# no detections of concealing_baby_swallow
 
 #%% removing empty columns
 
@@ -325,7 +337,7 @@ df_test = df_test.drop(columns=columns_to_remove)
 #%% adjusted_close and close comparison
 
 df_train.groupby("name").apply(lambda x: (x.adjusted_close == x.close).sum() / len(x))
-# TODO in most groups adjusted_close is equal to close, in actions there is significant difference
+# in most groups adjusted_close is equal to close, in actions there is significant difference
 
 #%% correlation - pearson
 
@@ -434,12 +446,7 @@ df_train.info()
 
 from sklearn.preprocessing import StandardScaler
 
-# TODO adjusted_close
 columns_to_standarize = ["adjusted_close", "close", "high", "low", "open", "volume"]
-
-# TODO Volume scaling strategy - it has wider distribution
-# cast Volume to float before scaling
-# possibly apply ln(x+1) or MinMaxScaler
 
 scalers = {}
 
@@ -464,12 +471,26 @@ for name, group in df_test.groupby('name'):
 
 print(df_train)
 
+#%% saving scalers
+
+import pickle
+
+scalers_path = 'scalers/scalers.pkl'
+
+with open(scalers_path, 'wb') as file:
+    pickle.dump(scalers, file)
+    
 #%% example inversion
 
-columns_to_standarize = ["close", "high", "low", "open", "volume"]
+with open(scalers_path, 'rb') as file:
+    scalers = pickle.load(file)
+
+columns_to_standarize = ["adjusted_close", "close", "high", "low", "open", "volume"]
 AAPL_scaled = data[data['name'] == 'AAPL'][columns_to_standarize]
 AAPL_original = scalers['AAPL'].inverse_transform(AAPL_scaled)
 AAPL_original.shape
+# close values
+AAPL_original[:, 1]
 
 #%% scaling remaining columns
 
@@ -478,22 +499,22 @@ AAPL_original.shape
 # sine and cosine transformation - cyclic features
 # or leave as it is
 
-from sklearn.preprocessing import MinMaxScaler
+# from sklearn.preprocessing import MinMaxScaler
 
-# optionally exclude Names
-columns_to_scale = [col for col in df_train.columns if col not in columns_to_standarize + ["name"]]
+# # optionally exclude Names
+# columns_to_scale = [col for col in df_train.columns if col not in columns_to_standarize + ["name"]]
 
-# isconsistent types
-scaler = MinMaxScaler()
-df_train[columns_to_scale] = scaler.fit_transform(df_train[columns_to_scale])
-df_val[columns_to_scale] = scaler.transform(df_val[columns_to_scale])
-df_test[columns_to_scale] = scaler.transform(df_test[columns_to_scale])
+# # isconsistent types
+# scaler = MinMaxScaler()
+# df_train[columns_to_scale] = scaler.fit_transform(df_train[columns_to_scale])
+# df_val[columns_to_scale] = scaler.transform(df_val[columns_to_scale])
+# df_test[columns_to_scale] = scaler.transform(df_test[columns_to_scale])
 
-df_train.min()
-df_train.max()
+# df_train.min()
+# df_train.max()
 
-df_train.columns
-df_train.info()
+# df_train.columns
+# df_train.info()
 
 #%% preparing data as time series
 
@@ -530,54 +551,100 @@ def create_wide_horizon_time_series(data, columns, group_by_column, target_colum
         df_full = pd.concat([df_full, df])
     return df_full
 
-# omit Names and dates
-# volume ?
+# omit Names
 columns = [col for col in df_train.columns if not col.startswith("name")] # cols to shift
 group_by_column = "name"
 target_column = "close"
 sort_columns = ["date_year", "date_month", "date_day_of_month"]
 n = 20
-max_target_horizon = 3
+max_target_horizon = 5
 
-df_train = create_wide_horizon_time_series(df_train, columns, group_by_column, target_column, sort_columns, n, max_target_horizon)
-df_val = create_wide_horizon_time_series(df_val, columns, group_by_column, target_column, sort_columns, n, max_target_horizon)
-df_test = create_wide_horizon_time_series(df_test, columns, group_by_column, target_column, sort_columns, n, max_target_horizon)
+train_sets = {}
+val_sets = {}
+test_sets = {}
+
+for k in range(1, max_target_horizon + 1):
+    train_sets[k] = create_time_series(df_train, columns, group_by_column, target_column, sort_columns, n, k)
+    val_sets[k] = create_time_series(df_val, columns, group_by_column, target_column, sort_columns, n, k)
+    test_sets[k] = create_time_series(df_test, columns, group_by_column, target_column, sort_columns, n, k)
+
+# df_train = create_wide_horizon_time_series(df_train, columns, group_by_column, target_column, sort_columns, n, max_target_horizon)
+# df_val = create_wide_horizon_time_series(df_val, columns, group_by_column, target_column, sort_columns, n, max_target_horizon)
+# df_test = create_wide_horizon_time_series(df_test, columns, group_by_column, target_column, sort_columns, n, max_target_horizon)
 
 # reset index
-df_train = df_train.reset_index(drop=True)
-df_val = df_val.reset_index(drop=True)
-df_test = df_test.reset_index(drop=True)
+for k in range(1, max_target_horizon + 1):
+    train_sets[k] = train_sets[k].reset_index(drop=True)
+    val_sets[k] = val_sets[k].reset_index(drop=True)
+    test_sets[k] = test_sets[k].reset_index(drop=True)
+    
+# df_train = df_train.reset_index(drop=True)
+# df_val = df_val.reset_index(drop=True)
+# df_test = df_test.reset_index(drop=True)
 
 #%% identify target column
 
-y_train = df_train["y"]
-y_val = df_val["y"]
-y_test = df_test["y"]
+y_train_sets = {}
+y_val_sets = {}
+y_test_sets = {}
 
-# TODO change inplace
+for k in range(1, max_target_horizon + 1):
+    y_train_sets[k] = train_sets[k]["y"]
+    y_val_sets[k] = val_sets[k]["y"]
+    y_test_sets[k] = test_sets[k]["y"]
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", Warning)
+        train_sets[k] = train_sets[k].drop(columns=["y"])
+        val_sets[k] = val_sets[k].drop(columns=["y"])
+        test_sets[k] = test_sets[k].drop(columns=["y"])
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore", Warning)
-    for data in [df_train, df_val, df_test]:
-        data.drop(columns=["y"], inplace=True)
+# y_train = df_train["y"]
+# y_val = df_val["y"]
+# y_test = df_test["y"]
+
+# with warnings.catch_warnings():
+#     warnings.simplefilter("ignore", Warning)
+#     for data in [df_train, df_val, df_test]:
+#         data.drop(columns=["y"], inplace=True)
 
 #%% drop name
 
-df_train = df_train.drop(columns=["name"])
-df_val = df_val.drop(columns=["name"])
-df_test = df_test.drop(columns=["name"])
+for k in range(1, max_target_horizon + 1):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", Warning)
+        train_sets[k] = train_sets[k].drop(columns=["name"])
+        val_sets[k] = val_sets[k].drop(columns=["name"])
+        test_sets[k] = test_sets[k].drop(columns=["name"])
+
+# df_train = df_train.drop(columns=["name"])
+# df_val = df_val.drop(columns=["name"])
+# df_test = df_test.drop(columns=["name"])
 
 #%% save data
 
-df_train.to_csv("datasets/df_train.csv", index=False)
-y_train.to_csv("datasets/y_train.csv", index=False)
+def save_data(X_sets, y_sets, directory, x_name, y_name):
+    n = len(X_sets)
+    for k in range(1, n + 1):
+        X_path = os.path.join(directory, f"{x_name}_{k}.csv")
+        y_path = os.path.join(directory, f"{y_name}_{k}.csv")
+        X_sets[k].to_csv(X_path, index=False)
+        y_sets[k].to_csv(y_path, index=False)
+        
 
-df_val.to_csv("datasets/df_val.csv", index=False)
-y_val.to_csv("datasets/y_val.csv", index=False)
+directory = "datasets"
 
-df_test.to_csv("datasets/df_test.csv", index=False)
-y_test.to_csv("datasets/y_test.csv", index=False)
+save_data(train_sets, y_train_sets, directory, "df_train", "y_train")
+save_data(val_sets, y_val_sets, directory, "df_val", "y_val")
+save_data(test_sets, y_test_sets, directory, "df_test", "y_test")
 
+# df_train.to_csv("datasets/df_train.csv", index=False)
+# y_train.to_csv("datasets/y_train.csv", index=False)
+
+# df_val.to_csv("datasets/df_val.csv", index=False)
+# y_val.to_csv("datasets/y_val.csv", index=False)
+
+# df_test.to_csv("datasets/df_test.csv", index=False)
+# y_test.to_csv("datasets/y_test.csv", index=False)
 
 #%%
 
