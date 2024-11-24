@@ -12,6 +12,17 @@ import numpy as np
 import pandas as pd
 
 def load_data(directory_name, suffix=""):
+    """
+    wczytuje wszystkie pliki csv o danym przyrostku do jednej ramki danych,
+    dodając kolumnę "name" z nazwą pliku
+    nazwy plików są w formacie: nazwa_data(_1d).csv
+    kolumny mają nazwy: Price	Adj Close	Close	High	Low	Open	Volume
+    pierwsza kolumna zawiera informacje o dacie
+    dwa pierwsze wiersze są puste
+    :param directory_name: nazwa folderu z danymi
+    :param suffix: przyrostek nazwy plików, np. "_data_1d.csv"
+    :return: ramka danych
+    """
     df = None
     for file_name in os.listdir(directory_name):
         if not file_name.endswith(suffix):
@@ -175,10 +186,19 @@ print(f'test: {df_test.shape}')
 #%% mutable length formations
 
 import importlib.util
-import threading
 
 def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
-    def apply_function(df, function, group_by_column, width):
+    """
+    wykrywa schematy fraktalne o zmiennej długości w ramcę danych,
+    dodaje odpowiadające im kolumny i zwraca kopię
+    :param df: ramka danych z kolumnami 'close', 'high', 'low', 'open', 'adjusted_close'
+    :param path: ścieżka do folderu z funkcjami fraktalnymi
+    :param group_by_column: kolumna, po której dane są grupowane
+    :param prefix: przedrostek do nazw nowych kolumn
+    :param width: ilość obserwacji, na których będą wykrywane schematy
+    :return: kopia wejściowej ramki danych z dodanymi kolumnami
+    """
+    def apply_function(df, function, width):
         n = len(df)
         res = np.full(n, False)
         for i in range(width-1, n):
@@ -201,7 +221,7 @@ def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
             column_name = prefix + function_name.lstrip("wykryj_")
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", pd.errors.SettingWithCopyWarning)
-                new_columns[column_name] = np.concatenate([apply_function(group, function, group_by_column, width) for _, group in df.groupby(group_by_column)]).astype(int)
+                new_columns[column_name] = np.concatenate([apply_function(group, function, width) for _, group in df.groupby(group_by_column)]).astype(int)
     res_data = pd.concat([df.reset_index(drop=True)] + [pd.Series(value, name=key) for key, value in new_columns.items()], axis=1)
     return res_data
 
@@ -238,7 +258,14 @@ sys.path.append(os.path.abspath("Wskaźniki itp"))
 from cykl import wykryj_typ_cyklu
 
 def add_cycle_columns(df, group_by_column, width):
-    def apply_cycle_function(df, group_by_column, width):
+    """
+    dodaje do ramki danych kolumny z informacją o cyklu w danych cenowych
+    :param df: ramka danych z kolumnami 'close', 'high', 'low', 'open', 'adjusted_close'
+    :param group_by_column: kolumna, po której dane są grupowane
+    :param width: ilość obserwacji, na których będzie wykrywany cykl
+    :return: ramka danych z dodanymi kolumnami
+    """
+    def apply_cycle_function(df, width):
         n = len(df)
         res = np.full(n, "", dtype=object)
         for i in range(width-1, n):
@@ -255,7 +282,7 @@ def add_cycle_columns(df, group_by_column, width):
     }
     
     # TODO warnings
-    df["cycle"] = np.concatenate([apply_cycle_function(group, group_by_column, width) for _, group in df.groupby(group_by_column)])
+    df["cycle"] = np.concatenate([apply_cycle_function(group, width) for _, group in df.groupby(group_by_column)])
     df["cycle"] = df["cycle"].apply(lambda x: cycle_names[x])
 
     # one-hot encoding
@@ -277,6 +304,13 @@ df_test = add_cycle_columns(df_test, group_by_column, width)
 from EMA import ema
 
 def add_ema_columns(df, group_by_column, period):
+    """
+    dodaje do dancyh kolumny o wykładniczej sredniej ruchomej
+    :param df: ramka danych z kolumnami 'close', 'high', 'low', 'open', 'adjusted_close'
+    :param group_by_column: kolumna, po której dane są grupowane
+    :param period: okres, w których liczona jest średnia
+    :return: ramka danych z dodaną kolumną
+    """
     df[f"ema_{period}"] = np.concatenate([ema(group.close, period) for _, group in df.groupby(group_by_column)])
     return df
 
@@ -293,6 +327,15 @@ for period in ema_periods:
 # TODO reset index outside functions
 
 def add_fractal_short_schemas(df, path, group_by_column, prefix):
+    """
+    wykrywa schematy fraktalne o stałej długości w ramcę danych,
+    dodaje odpowiadające im kolumny i zwraca kopię
+    :param df: ramka danych z kolumnami 'close', 'high', 'low', 'open', 'adjusted_close'
+    :param path: ścieżka do folderu z funkcjami fraktalnymi
+    :param group_by_column: kolumna, po której dane są grupowane
+    :param prefix: przedrostek do nazw nowych kolumn
+    :return: kopia wejściowej ramki danych z dodanymi kolumnami
+    """
     new_columns = {}
     for file_name in os.listdir(path):
         file_path = os.path.join(path, file_name)
@@ -522,8 +565,15 @@ AAPL_original[:, 1]
 
 def create_time_series(data, columns, group_by_column, target_column, sort_columns, n, k=1):
     """
-    n - time series length
-    k - target horizon
+    zmienia dane cenowe na szeregi czasowe
+    :param data: ramka danych z kolumnami 'close', 'high', 'low', 'open', 'adjusted_close'
+    :param columns: lista kolumn, które mają być zwielokrotnione dla każdej obserwacji
+    :param group_by_column: kolumna, po której dane są grupowane
+    :param target_column: zmienna celu
+    :param sort_columns: lista kolumn, po których dane będą sortowane
+    :param n: długość szeregu (ilość obserwacji)
+    :param k: odległość w liczbie obserwacji zmiennej celu od ostatniej znanej obserwacji
+    :return: ramka danych
     """
     # setting chronological order
     data = data.sort_values(by=[group_by_column] + sort_columns)
@@ -623,6 +673,15 @@ for k in range(1, max_target_horizon + 1):
 #%% save data
 
 def save_data(X_sets, y_sets, directory, x_name, y_name):
+    """
+    zapisuje dane z wielu ramek danych do plików, dodając informacje o indeksie w nazwie
+    :param X_sets: słownik ramek danych
+    :param y_sets: słownik ramek danych, o tej samej długości co X_sets
+    :param directory: katalog do zapisu
+    :param x_name: nazwa plików dla zbiorów z X_sets
+    :param y_name: nazwa plików dla zbiorów z y_sets
+    :return:
+    """
     n = len(X_sets)
     for k in range(1, n + 1):
         X_path = os.path.join(directory, f"{x_name}_{k}.csv")
