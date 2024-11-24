@@ -142,7 +142,6 @@ df.date_year_end.value_counts()
 df.date_weekend.value_counts() # there is some data from weekend
 df[df.date_weekend == 1]["name"] # crypto
 
-
 #%% name encoding (one-hot)
 
 name_column = df["name"]
@@ -202,7 +201,7 @@ def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
         n = len(df)
         res = np.full(n, False)
         for i in range(width-1, n):
-            data = df_train[i+1-width:i+1]
+            data = df[i+1-width:i+1]
             res[i] = function(data)
         return res
 
@@ -225,7 +224,6 @@ def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
     res_data = pd.concat([df.reset_index(drop=True)] + [pd.Series(value, name=key) for key, value in new_columns.items()], axis=1)
     return res_data
 
-functions_path = os.path.join(path, 'Wskaźniki itp/Schemat zmienna długość')
 functions_path = 'Wskaźniki itp/Schemat zmienna długość'
 group_by_column = 'name'
 width = 20
@@ -247,7 +245,7 @@ for col in df_train.columns:
     if col.startswith("long_formation_"):
         print(f"{col}: {len(df_train[col][df_train[col] == True])}")
 
-# for width=20 death_cross, exhaustion_gap, golden_cross, unaway_gap were not detected
+# for width=20 death_cross, golden_cross were not detected
 # remove these features or check other widths
 
 #%% cycle
@@ -269,7 +267,7 @@ def add_cycle_columns(df, group_by_column, width):
         n = len(df)
         res = np.full(n, "", dtype=object)
         for i in range(width-1, n):
-            data = df_train[i+1-width:i+1]
+            data = df[i+1-width:i+1]
             # get cycle name only
             res[i] = wykryj_typ_cyklu(data)[1]
         return res
@@ -303,7 +301,7 @@ df_test = add_cycle_columns(df_test, group_by_column, width)
 
 from EMA import ema
 
-def add_ema_columns(df, group_by_column, period):
+def add_ema_column(df, group_by_column, period):
     """
     dodaje do dancyh kolumny o wykładniczej sredniej ruchomej
     :param df: ramka danych z kolumnami 'close', 'high', 'low', 'open', 'adjusted_close'
@@ -318,9 +316,9 @@ group_by_column = "name"
 ema_periods = [10, 20, 50, 100, 200]
 
 for period in ema_periods:
-    df_train = add_ema_columns(df_train, group_by_column, period)
-    df_val = add_ema_columns(df_val, group_by_column, period)
-    df_test = add_ema_columns(df_test, group_by_column, period)
+    df_train = add_ema_column(df_train, group_by_column, period)
+    df_val = add_ema_column(df_val, group_by_column, period)
+    df_test = add_ema_column(df_test, group_by_column, period)
     
 #%% constant length formations
 
@@ -672,7 +670,7 @@ for k in range(1, max_target_horizon + 1):
 
 #%% save data
 
-def save_data(X_sets, y_sets, directory, x_name, y_name):
+def save_data_sets(X_sets, y_sets, directory, x_name, y_name):
     """
     zapisuje dane z wielu ramek danych do plików, dodając informacje o indeksie w nazwie
     :param X_sets: słownik ramek danych
@@ -692,9 +690,9 @@ def save_data(X_sets, y_sets, directory, x_name, y_name):
 
 directory = "datasets"
 
-save_data(train_sets, y_train_sets, directory, "df_train", "y_train")
-save_data(val_sets, y_val_sets, directory, "df_val", "y_val")
-save_data(test_sets, y_test_sets, directory, "df_test", "y_test")
+save_data_sets(train_sets, y_train_sets, directory, "df_train", "y_train")
+save_data_sets(val_sets, y_val_sets, directory, "df_val", "y_val")
+save_data_sets(test_sets, y_test_sets, directory, "df_test", "y_test")
 
 # df_train.to_csv("datasets/df_train.csv", index=False)
 # y_train.to_csv("datasets/y_train.csv", index=False)

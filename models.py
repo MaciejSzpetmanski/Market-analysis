@@ -10,13 +10,37 @@ os.chdir(path)
 
 import pandas as pd
 
-df_train = pd.read_csv("datasets/df_train.csv")
-df_val = pd.read_csv("datasets/df_val.csv")
-df_test = pd.read_csv("datasets/df_test.csv")
+# df_train = pd.read_csv("datasets/df_train.csv")
+# df_val = pd.read_csv("datasets/df_val.csv")
+# df_test = pd.read_csv("datasets/df_test.csv")
 
-y_train = pd.read_csv("datasets/y_train.csv")
-y_val = pd.read_csv("datasets/y_val.csv")
-y_test = pd.read_csv("datasets/y_test.csv")
+# y_train = pd.read_csv("datasets/y_train.csv")
+# y_val = pd.read_csv("datasets/y_val.csv")
+# y_test = pd.read_csv("datasets/y_test.csv")
+
+def load_dataset(directory_name, name, target_horizon):
+    df_file_path = os.path.join(directory_name, f"df_{name}_{target_horizon}.csv")
+    y_file_path = os.path.join(directory_name, f"y_{name}_{target_horizon}.csv")
+    if os.path.isfile(df_file_path) and os.path.isfile(y_file_path):
+        df = pd.read_csv(df_file_path)
+        y = pd.read_csv(y_file_path)
+        return df, y
+
+directory_name = "datasets"
+df_train_1, y_train_1 = load_dataset(directory_name, "train", 1)
+
+def load_data_with_max_horizon(directory_name, name, max_target_horizon):
+    df = None
+    y = None
+    for k in range(1, max_target_horizon + 1):
+        df_input, y_input = load_dataset(directory_name, name, k)
+        df = pd.concat([df, df_input], ignore_index=True)
+        y = pd.concat([y, y_input], ignore_index=True)
+    return df, y
+
+df_train, y_train = load_data_with_max_horizon(directory_name, "train", 3)
+df_val, y_val = load_data_with_max_horizon(directory_name, "val", 3)
+df_test, y_test = load_data_with_max_horizon(directory_name, "test", 3)
 
 #%%
 
