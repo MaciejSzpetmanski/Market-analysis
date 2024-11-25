@@ -28,6 +28,24 @@ def load_dataset(directory_name, name, target_horizon):
 
 directory_name = "datasets"
 df_train_1, y_train_1 = load_dataset(directory_name, "train", 1)
+df_train_2, y_train_2 = load_dataset(directory_name, "train", 2)
+df_train_3, y_train_3 = load_dataset(directory_name, "train", 3)
+df_train_4, y_train_4 = load_dataset(directory_name, "train", 4)
+df_train_5, y_train_5 = load_dataset(directory_name, "train", 5)
+
+df_val_1, y_val_1 = load_dataset(directory_name, "val", 1)
+df_val_2, y_val_2 = load_dataset(directory_name, "val", 2)
+df_val_3, y_val_3 = load_dataset(directory_name, "val", 3)
+df_val_4, y_val_4 = load_dataset(directory_name, "val", 4)
+df_val_5, y_val_5 = load_dataset(directory_name, "val", 5)
+
+df_test_1, y_test_1 = load_dataset(directory_name, "test", 1)
+df_test_2, y_test_2 = load_dataset(directory_name, "test", 2)
+df_test_3, y_test_3 = load_dataset(directory_name, "test", 3)
+df_test_4, y_test_4 = load_dataset(directory_name, "test", 4)
+df_test_5, y_test_5 = load_dataset(directory_name, "test", 5)
+
+#%%
 
 def load_data_with_max_horizon(directory_name, name, max_target_horizon):
     df = None
@@ -42,10 +60,31 @@ df_train, y_train = load_data_with_max_horizon(directory_name, "train", 3)
 df_val, y_val = load_data_with_max_horizon(directory_name, "val", 3)
 df_test, y_test = load_data_with_max_horizon(directory_name, "test", 3)
 
-#%%
+#%% train
+
+df_train = df_train_5
+y_train = y_train_5
 
 for col in df_train.columns:
     if (df_train[col] == y_train.y).all():
+        print("yes")
+        
+#%% val
+
+df_val = df_val_5
+y_val = y_val_5
+
+for col in df_val.columns:
+    if (df_val[col] == y_val.y).all():
+        print("yes")
+        
+#%% test
+
+df_test = df_test_5
+y_test = y_test_5
+
+for col in df_test.columns:
+    if (df_test[col] == y_test.y).all():
         print("yes")
 
 #%% linear regression

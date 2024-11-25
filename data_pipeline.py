@@ -16,6 +16,11 @@ import pickle
 
 #%% loading data
 
+def load_data_from_file(path):
+    if os.path.isfile(path) and path.endswith(".csv"):
+        df = pd.read_csv(path)
+    return df
+
 def load_data(directory_name, suffix=""):
     """
     wczytuje wszystkie pliki csv o danym przyrostku do jednej ramki danych,
@@ -33,21 +38,19 @@ def load_data(directory_name, suffix=""):
         if not file_name.endswith(suffix):
             continue
         file_path = os.path.join(directory_name, file_name)
-        if os.path.isfile(file_path) and file_path.endswith(".csv"):
-            df_input = pd.read_csv(file_path)
-            # renaming the first column to Date
-            df_input.rename(columns={'Price': 'date'}, inplace=True)
-            # dropping first 2 empty rows 
-            df_input.drop([0, 1], inplace=True)
             
-            # parsing filename
-            file_name += "_"
-            file_info = file_name.replace(".csv", "").split("_")
-            # adding source information
-            df_input["name"] = file_info[0]
-            # df_input["Freq"] = file_info[2]
-            
-            df = pd.concat([df, df_input], ignore_index=True)
+        df_input = load_data_from_file(file_path)
+        # renaming the first column to Date
+        df_input.rename(columns={'Price': 'date'}, inplace=True)
+        # dropping first 2 empty rows 
+        df_input.drop([0, 1], inplace=True)
+        
+        # parsing filename
+        file_name += "_"
+        file_info = file_name.replace(".csv", "").split("_")
+        # adding source information
+        df_input["name"] = file_info[0]
+        df = pd.concat([df, df_input], ignore_index=True)
     df.columns = df.columns.str.lower()
     df = df.rename(columns={"adj close": "adjusted_close"})
     return df
@@ -343,50 +346,68 @@ def save_data_sets(X_sets, y_sets, directory, x_name, y_name):
 #%%
 
 def pipeline():
+    print("Wczytywanie danych")
     df = load_data("data", "_data_1d.csv")
+    print("Zmiana typów kolumn")
     df = convert_column_types(df)
     df = remove_name_values(df, "EURGBP=X")
     
     # OPTIONAL validation
-    
+
+    print("Dodawanie kolumn czasowych")
     df = add_time_columns(df)
+    print("Kodowanie nazw")
     df = encode_names(df)
+    print("Podział na zbiory")
     df_train, df_val, df_test = split_data(df)
     
     functions_path = 'Wskaźniki itp/Schemat zmienna długość'
     group_by_column = 'name'
     width = 20
-    
+
+    print("Dodawanie cech fraktalnych o zmiennej długości")
     df_train = add_fractal_long_schemas(df_train, functions_path, group_by_column, "long_formation_", width)
     df_val = add_fractal_long_schemas(df_val, functions_path, group_by_column, "long_formation_", width)
     df_test = add_fractal_long_schemas(df_test, functions_path, group_by_column, "long_formation_", width)
-        
+
+    print("Dodawanie cech cykli cenowych")
     df_train = add_cycle_columns(df_train, group_by_column, width)
     df_val = add_cycle_columns(df_val, group_by_column, width)
     df_test = add_cycle_columns(df_test, group_by_column, width)
-        
+
     ema_periods = [10, 20, 50, 100, 200]
-    
+
+    print("Dodawanie cech średniej kroczącej")
     df_train = add_ema_columns(df_train, group_by_column, ema_periods)
     df_val = add_ema_columns(df_val, group_by_column, ema_periods)
     df_test = add_ema_columns(df_test, group_by_column, ema_periods)
-    
+
     functions_path = 'Wskaźniki itp/Schemat stała długość'
-    
+
+    print("Dodawanie cech fraktalnych o stałej długości")
     df_train = add_fractal_short_schemas(df_train, functions_path, group_by_column, "short_formation_")
     df_val = add_fractal_short_schemas(df_val, functions_path, group_by_column, "short_formation_")
     df_test = add_fractal_short_schemas(df_test, functions_path, group_by_column, "short_formation_")
-    
+
+    print("Usuwanie pustych kolumn")
     df_train, df_val, df_test = remove_empty_columns(df_train, df_val, df_test)
     
-    columns_to_standarize = ["adjusted_close", "close", "high", "low", "open", "volume"]
+    train_columns_path = 'scalers/train_columns.pkl'
+
+    print("Zapisywanie kolumn treningowych")
+    save_object(df_train.columns, train_columns_path)
     
+    columns_to_standarize = ["adjusted_close", "close", "high", "low", "open", "volume"]
+
+    print("Standaryzacja kolumn")
+    # TODO chenge volume type to float
     df_train, scalers = standarize_training_columns(df_train, columns_to_standarize, group_by_column)
     df_val = standarize_columns(df_val, scalers, columns_to_standarize, group_by_column)
     df_test = standarize_columns(df_test, scalers, columns_to_standarize, group_by_column)
     
     scalers_path = 'scalers/scalers.pkl'
-    
+
+    print("Zapisywanie obiektów skalujących")
     save_object(scalers, scalers_path)
     
     columns = [col for col in df_train.columns if not col.startswith("name")]
@@ -394,25 +415,36 @@ def pipeline():
     sort_columns = ["date_year", "date_month", "date_day_of_month"]
     n = 20
     max_target_horizon = 5
-    
+
+    print("Tworzenie szeregów czasowych")
     train_sets = create_time_series_set(df_train, columns, group_by_column, target_column, sort_columns, n, max_target_horizon)
     val_sets = create_time_series_set(df_val, columns, group_by_column, target_column, sort_columns, n, max_target_horizon)
     test_sets = create_time_series_set(df_test, columns, group_by_column, target_column, sort_columns, n, max_target_horizon)
-    
+
+    print("Wyodrębnianie zmiennej celu")
     train_sets, y_train_sets = get_target_columns(train_sets, max_target_horizon)
     val_sets, y_val_sets = get_target_columns(val_sets, max_target_horizon)
     test_sets, y_test_sets = get_target_columns(test_sets, max_target_horizon)
     
     columns_to_drop = ["name"]
-    
+
+    print("Usuwanie kolumny z nazwą")
     train_sets = drop_columns_from_sets(train_sets, max_target_horizon, columns_to_drop)
     val_sets = drop_columns_from_sets(val_sets, max_target_horizon, columns_to_drop)
     test_sets = drop_columns_from_sets(test_sets, max_target_horizon, columns_to_drop)
     
     save_directory = "datasets"
-    
+
+    print("Zapisywanie zbiorów danych")
     save_data_sets(train_sets, y_train_sets, save_directory, "df_train", "y_train")
     save_data_sets(val_sets, y_val_sets, save_directory, "df_val", "y_val")
     save_data_sets(test_sets, y_test_sets, save_directory, "df_test", "y_test")
+
+    print("Zakończono przetwarzanie")
     
-    
+
+def main():
+    pipeline()
+
+if __name__ == '__main__':
+    main()
