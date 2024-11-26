@@ -102,9 +102,17 @@ def split_data(df, offset_years=1, test_size=0.6, random_state=42):
     split_date = last_date - pd.DateOffset(years=offset_years)
     
     df_train = df[df['date'] <= split_date]
-    df_train.shape
     
-    df_val, df_test = train_test_split(df[df['date'] > split_date], test_size=test_size, random_state=random_state, stratify=df[df['date'] > split_date]['date'])
+    # df_val, df_test = train_test_split(df[df['date'] > split_date], test_size=test_size, random_state=random_state, stratify=df[df['date'] > split_date]['date'])
+    
+    # sorting by date
+    df_val_test = df[df['date'] > split_date].sort_values(by=['date_year', 'date_month', 'date_day_of_month'])
+    
+    val_test_len = len(df_val_test)
+    val_len = int(val_test_len * (1 - test_size))
+    
+    df_val = df_val_test.iloc[:val_len]
+    df_test = df_val_test.iloc[val_len:]
     
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", Warning)
@@ -240,20 +248,20 @@ def remove_empty_columns(df_train, df_val, df_test):
     df_test = df_test.drop(columns=columns_to_remove)
     return df_train, df_val, df_test
 
-def standarize_training_columns(df_train, columns_to_standarize, group_by_column):
+def standardize_training_columns(df_train, columns_to_standardize, group_by_column):
     scalers = {}
     for name, group in df_train.groupby(group_by_column):
         scaler = StandardScaler()
-        scaled_values = scaler.fit_transform(group[columns_to_standarize])
-        df_train.loc[df_train[group_by_column] == name, columns_to_standarize] = scaled_values
+        scaled_values = scaler.fit_transform(group[columns_to_standardize])
+        df_train.loc[df_train[group_by_column] == name, columns_to_standardize] = scaled_values
         scalers[name] = scaler
     return df_train, scalers
 
-def standarize_columns(df, scalers, columns_to_standarize, group_by_column):
+def standardize_columns(df, scalers, columns_to_standardize, group_by_column):
     for name, group in df.groupby(group_by_column):
         scaler = scalers[name]
-        scaled_values = scaler.transform(group[columns_to_standarize])
-        df.loc[df[group_by_column] == name, columns_to_standarize] = scaled_values
+        scaled_values = scaler.transform(group[columns_to_standardize])
+        df.loc[df[group_by_column] == name, columns_to_standardize] = scaled_values
     return df
 
 def save_object(obj, path):
@@ -267,9 +275,9 @@ def load_object(path):
 
 def inverse_target_scaling(data, name, scalers):
     # name = "AAPL"
-    columns_to_standarize = ["adjusted_close", "close", "high", "low", "open", "volume"]
+    columns_to_standardize = ["adjusted_close", "close", "high", "low", "open", "volume"]
     
-    data_scaled = data[data[f'name_{name}'] == 1][columns_to_standarize]
+    data_scaled = data[data[f'name_{name}'] == 1][columns_to_standardize]
     data_original = scalers[name].inverse_transform(data_scaled)
     close_original = data_original[:, 1]
     return close_original
@@ -397,13 +405,16 @@ def pipeline():
     print("Zapisywanie kolumn treningowych")
     save_object(df_train.columns, train_columns_path)
     
-    columns_to_standarize = ["adjusted_close", "close", "high", "low", "open", "volume"]
+    columns_to_standardize = ["adjusted_close", "close", "high", "low", "open", "volume"]
 
     print("Standaryzacja kolumn")
-    # TODO chenge volume type to float
-    df_train, scalers = standarize_training_columns(df_train, columns_to_standarize, group_by_column)
-    df_val = standarize_columns(df_val, scalers, columns_to_standarize, group_by_column)
-    df_test = standarize_columns(df_test, scalers, columns_to_standarize, group_by_column)
+    df_train.volume = df_train.volume.astype(float)
+    df_val.volume = df_val.volume.astype(float)
+    df_test.volume = df_test.volume.astype(float)
+
+    df_train, scalers = standardize_training_columns(df_train, columns_to_standardize, group_by_column)
+    df_val = standardize_columns(df_val, scalers, columns_to_standardize, group_by_column)
+    df_test = standardize_columns(df_test, scalers, columns_to_standardize, group_by_column)
     
     scalers_path = 'scalers/scalers.pkl'
 
@@ -415,7 +426,7 @@ def pipeline():
     sort_columns = ["date_year", "date_month", "date_day_of_month"]
     n = 20
     max_target_horizon = 5
-
+    
     print("Tworzenie szeregów czasowych")
     train_sets = create_time_series_set(df_train, columns, group_by_column, target_column, sort_columns, n, max_target_horizon)
     val_sets = create_time_series_set(df_val, columns, group_by_column, target_column, sort_columns, n, max_target_horizon)

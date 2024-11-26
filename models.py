@@ -27,6 +27,9 @@ def load_dataset(directory_name, name, target_horizon):
         return df, y
 
 directory_name = "datasets"
+
+#%%
+
 df_train_1, y_train_1 = load_dataset(directory_name, "train", 1)
 df_train_2, y_train_2 = load_dataset(directory_name, "train", 2)
 df_train_3, y_train_3 = load_dataset(directory_name, "train", 3)
