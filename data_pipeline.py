@@ -17,42 +17,24 @@ import pickle
 #%% loading data
 
 def load_data_from_file(path):
+    df = None
     if os.path.isfile(path) and path.endswith(".csv"):
         df = pd.read_csv(path)
     return df
 
 def load_data(directory_name, suffix=""):
-    """
-    wczytuje wszystkie pliki csv o danym przyrostku do jednej ramki danych,
-    dodając kolumnę "name" z nazwą pliku
-    nazwy plików są w formacie: nazwa_data(_1d).csv
-    kolumny mają nazwy: Price	Adj Close	Close	High	Low	Open	Volume
-    pierwsza kolumna zawiera informacje o dacie
-    dwa pierwsze wiersze są puste
-    :param directory_name: nazwa folderu z danymi
-    :param suffix: przyrostek nazwy plików, np. "_data_1d.csv"
-    :return: ramka danych
-    """
     df = None
     for file_name in os.listdir(directory_name):
         if not file_name.endswith(suffix):
             continue
         file_path = os.path.join(directory_name, file_name)
-            
         df_input = load_data_from_file(file_path)
-        # renaming the first column to Date
-        df_input.rename(columns={'Price': 'date'}, inplace=True)
-        # dropping first 2 empty rows 
-        df_input.drop([0, 1], inplace=True)
-        
         # parsing filename
         file_name += "_"
         file_info = file_name.replace(".csv", "").split("_")
         # adding source information
         df_input["name"] = file_info[0]
         df = pd.concat([df, df_input], ignore_index=True)
-    df.columns = df.columns.str.lower()
-    df = df.rename(columns={"adj close": "adjusted_close"})
     return df
 
 def convert_column_types(df):
@@ -190,8 +172,9 @@ def add_cycle_columns(df, group_by_column, width):
     
     df["cycle"] = np.concatenate([apply_cycle_function(group, width) for _, group in df.groupby(group_by_column)])
     df["cycle"] = df["cycle"].apply(lambda x: cycle_names[x])
-
-    df = pd.get_dummies(df, columns=["cycle"], prefix="cycle",  dtype=int)
+    
+    df = pd.get_dummies(df, columns=["cycle"], prefix="cycle", dtype=int)
+    
     return df
 
 def add_ema_column(df, group_by_column, period):
@@ -457,5 +440,5 @@ def pipeline():
 def main():
     pipeline()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

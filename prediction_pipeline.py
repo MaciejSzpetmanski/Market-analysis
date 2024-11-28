@@ -12,21 +12,64 @@ from EMA import ema
 from sklearn.preprocessing import StandardScaler
 import pickle
 from data_pipeline import *
+import data_pipeline
 
 #%%
 
-def prepare_data_for_prediction(path, name, ):
-    df = load_data_from_file(path)
-    df = convert_column_types(df)
+def create_time_series_vector(data, columns, n):
+    shifted_columns = {}
+    for i in range(1, n):
+        for col in columns:
+            shifted_columns[col + "_" + str(i)] = data[col].shift(-i)
+    date_columns = [col for col in columns if col.startswith("date")]
+    # for col in date_columns:
+    #     shifted_columns[col + "_y"] = data.groupby(group_by_column, group_keys=False)[col].shift(-(n-1+k))
+    # target column
+    res_data = pd.concat([data] + [pd.Series(value, name=key) for key, value in shifted_columns.items()], axis=1)
+    # removing rows with missing values
+    res_data = res_data.groupby(group_by_column, group_keys=False).head(-(n-1))
+    last_row = res_data.tail(1).reset_index(drop=True)
+    return last_row
+
+# TODO check weekend, free days
+def validate_y_date(date, name):
+    pass
+
+def create_date_vector(date):
+    df_date = pd.DataFrame()
+    df_date["date"] = [date]
+    df_date["date"] = pd.to_datetime(df_date["date"])
+    df_date = add_time_columns(df_date)
+    return df_date
+
+def create_preddiction_date_vector(date):
+    y_date = create_date_vector(date)
+    y_date = y_date.drop(columns=["date"])
+    y_date = y_date.add_suffix('_y')
+    return y_date
+
+#%%
+
+def prepare_data_for_prediction(path, name, date):
+    path = "data/^DJI_data_1d.csv"
+    df = data_pipeline.load_data_from_file(path)
+    # TODO checking input data size
+    df = data_pipeline.convert_column_types(df)
     df = add_time_columns(df)
+    
+    df = df.sort_values(by=["date"])
+    
+    # TODO trimming, filtering data
+    df = df.tail(20).reset_index(drop=True)
     
     columns = load_object("scalers/train_columns.pkl")
     name_columns = [col for col in columns if col.startswith("name_")]
+    name = "^DJI"
     for col in name_columns:
         df[col] = 0
     df[f"name_{name}"] = 1
     # artificially add name column for groupping
-    df["name"] = 1
+    df["name"] = name
     
     functions_path = 'Wskaźniki itp/Schemat zmienna długość'
     group_by_column = 'name'
@@ -48,23 +91,34 @@ def prepare_data_for_prediction(path, name, ):
     df = add_fractal_short_schemas(df, functions_path, group_by_column, "short_formation_")
     
     print("Wybór kolumn")
-    df = df[columns]
+    # TODO niewykryte kolumny (cykle)
+    missing_columns = [col for col in columns if col not in df.columns]
+    for col in missing_columns:
+        df[col] = 0
+    df = df[columns] # removing date, setting order of columns
     
     columns_to_standarize = ["adjusted_close", "close", "high", "low", "open", "volume"]
 
     scalers = load_object("scalers/scalers.pkl")
 
     print("Standaryzacja kolumn")
-    df = standarize_columns(df, scalers, columns_to_standarize, group_by_column)
-    
-    # TODO do not generate y
-    # create_time_series(data, columns, group_by_column, target_column, sort_columns, n, k=1)
+    df.volume = df.volume.astype(float)
+    df = standardize_columns(df, scalers, columns_to_standarize, group_by_column)
+
+    print("Tworzenie szeregów czasowych")
+    columns = [col for col in df.columns if not col.startswith("name")]
+    n = 20
+    output_vector = create_time_series_vector(df, columns, n)
     
     columns_to_drop = ["name"]
-
     print("Usuwanie kolumny z nazwą")
-    # TODO remove name column
+    output_vector = output_vector.drop(columns=columns_to_drop)
     
-    return df
+    # prediction date
+    y_date = create_preddiction_date_vector(date)
+    
+    result = pd.concat([output_vector, y_date], axis=1)
+    
+    return result
 
     
