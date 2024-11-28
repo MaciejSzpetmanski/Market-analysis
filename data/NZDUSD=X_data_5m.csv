@@ -1,3 +1,1 @@
-Price,Adj Close,Close,High,Low,Open,Volume
-Ticker,NZDUSD=X,NZDUSD=X,NZDUSD=X,NZDUSD=X,NZDUSD=X,NZDUSD=X
-Date,,,,,,
+date,adjusted_close,close,high,low,open,volume

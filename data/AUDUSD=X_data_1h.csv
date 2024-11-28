@@ -1,3 +1,1 @@
-Price,Adj Close,Close,High,Low,Open,Volume
-Ticker,AUDUSD=X,AUDUSD=X,AUDUSD=X,AUDUSD=X,AUDUSD=X,AUDUSD=X
-Date,,,,,,
+date,adjusted_close,close,high,low,open,volume

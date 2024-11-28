@@ -1,3 +1,1 @@
-Price,Adj Close,Close,High,Low,Open,Volume
-Ticker,000001.SS,000001.SS,000001.SS,000001.SS,000001.SS,000001.SS
-Date,,,,,,
+date,adjusted_close,close,high,low,open,volume

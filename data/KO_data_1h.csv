@@ -1,3 +1,1 @@
-Price,Adj Close,Close,High,Low,Open,Volume
-Ticker,KO,KO,KO,KO,KO,KO
-Date,,,,,,
+date,adjusted_close,close,high,low,open,volume
