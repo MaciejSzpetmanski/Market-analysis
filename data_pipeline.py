@@ -4,15 +4,39 @@ import os
 import numpy as np
 import pandas as pd
 from feature_engine.datetime import DatetimeFeatures
-from sklearn.model_selection import train_test_split
 import warnings
 import importlib.util
-import sys
-sys.path.append(os.path.abspath("Wskaźniki itp"))
-from cykl import wykryj_typ_cyklu
-from EMA import ema
+from indicators.cykl import wykryj_typ_cyklu
+from indicators.EMA import ema
 from sklearn.preprocessing import StandardScaler
 import pickle
+
+#%% global variables
+
+DATA_DIRECTORY = "data"
+FILE_SUFFIX = "_data_1d.csv"
+NAME_TO_REMOVE = "EURGBP=X"
+GROUP_BY_COLUMN = "name"
+LONG_SCHEMA_PATH = "indicators/Schemat zmienna długość"
+LONG_SCHEMA_PREFIX = "long_formation_"
+SCHEMA_WIDTH = 20
+EMA_PERIODS = [10, 20, 50, 100, 200]
+SHORT_SCHEMA_PATH = "indicators/Schemat stała długość"
+SHORT_SCHEMA_PREFIX = "short_formation_"
+TRAIN_COLUMNS_PATH = "scalers/train_columns.pkl"
+COLUMNS_TO_STANDARDIZE = ["adjusted_close", "close", "high", "low", "open", "volume"]
+SCALERS_PATH = "scalers/scalers.pkl"
+TARGET_COLUMN = "close"
+SORT_COLUMNS = ["date_year", "date_month", "date_day_of_month"]
+TIME_SERIES_LENGTH = 20
+MAX_TARGET_HORIZON = 5
+DATA_OUTPUT_DIRECTORY = "datasets"
+X_TRAIN_OUTPUT_NAME = "df_train"
+X_VAL_OUTPUT_NAME = "df_val"
+X_TEST_OUTPUT_NAME = "df_test"
+Y_TRAIN_OUTPUT_NAME = "y_train"
+Y_VAL_OUTPUT_NAME = "y_val"
+Y_TEST_OUTPUT_NAME = "y_test"
 
 #%% loading data
 
@@ -85,8 +109,6 @@ def split_data(df, offset_years=1, test_size=0.6, random_state=42):
     
     df_train = df[df['date'] <= split_date]
     
-    # df_val, df_test = train_test_split(df[df['date'] > split_date], test_size=test_size, random_state=random_state, stratify=df[df['date'] > split_date]['date'])
-    
     # sorting by date
     df_val_test = df[df['date'] > split_date].sort_values(by=['date_year', 'date_month', 'date_day_of_month'])
     
@@ -98,7 +120,7 @@ def split_data(df, offset_years=1, test_size=0.6, random_state=42):
     
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", Warning)
-        # removing Date column
+        # removing date column
         for data in [df_train, df_val, df_test]:
             data.drop(columns=['date'], inplace=True)
             
@@ -119,7 +141,7 @@ def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
     :param width: ilość obserwacji, na których będą wykrywane schematy
     :return: kopia wejściowej ramki danych z dodanymi kolumnami
     """
-    def apply_function(df, function, width):
+    def _apply_function(df, function, width):
         n = len(df)
         res = np.full(n, False)
         for i in range(width-1, n):
@@ -142,7 +164,7 @@ def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
             column_name = prefix + function_name.lstrip("wykryj_")
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", pd.errors.SettingWithCopyWarning)
-                new_columns[column_name] = np.concatenate([apply_function(group, function, width) for _, group in df.groupby(group_by_column)]).astype(int)
+                new_columns[column_name] = np.concatenate([_apply_function(group, function, width) for _, group in df.groupby(group_by_column)]).astype(int)
     res_data = pd.concat([df] + [pd.Series(value, name=key) for key, value in new_columns.items()], axis=1)
     return res_data
 
@@ -154,7 +176,7 @@ def add_cycle_columns(df, group_by_column, width):
     :param width: ilość obserwacji, na których będzie wykrywany cykl
     :return: ramka danych z dodanymi kolumnami
     """
-    def apply_cycle_function(df, width):
+    def _apply_cycle_function(df, width):
         n = len(df)
         res = np.full(n, "", dtype=object)
         for i in range(width-1, n):
@@ -170,7 +192,7 @@ def add_cycle_columns(df, group_by_column, width):
        "": "not_detected"
     }
     
-    df["cycle"] = np.concatenate([apply_cycle_function(group, width) for _, group in df.groupby(group_by_column)])
+    df["cycle"] = np.concatenate([_apply_cycle_function(group, width) for _, group in df.groupby(group_by_column)])
     df["cycle"] = df["cycle"].apply(lambda x: cycle_names[x])
     
     df = pd.get_dummies(df, columns=["cycle"], prefix="cycle", dtype=int)
@@ -336,12 +358,14 @@ def save_data_sets(X_sets, y_sets, directory, x_name, y_name):
       
 #%%
 
+
 def pipeline():
     print("Wczytywanie danych")
-    df = load_data("data", "_data_1d.csv")
+    df = load_data(DATA_DIRECTORY, FILE_SUFFIX)
     print("Zmiana typów kolumn")
     df = convert_column_types(df)
-    df = remove_name_values(df, "EURGBP=X")
+    # OPTIONAL remove EURGBP=X dataset
+    df = remove_name_values(df, NAME_TO_REMOVE)
     
     # OPTIONAL validation
 
@@ -352,87 +376,67 @@ def pipeline():
     print("Podział na zbiory")
     df_train, df_val, df_test = split_data(df)
     
-    functions_path = 'Wskaźniki itp/Schemat zmienna długość'
-    group_by_column = 'name'
-    width = 20
-
     print("Dodawanie cech fraktalnych o zmiennej długości")
-    df_train = add_fractal_long_schemas(df_train, functions_path, group_by_column, "long_formation_", width)
-    df_val = add_fractal_long_schemas(df_val, functions_path, group_by_column, "long_formation_", width)
-    df_test = add_fractal_long_schemas(df_test, functions_path, group_by_column, "long_formation_", width)
+    df_train = add_fractal_long_schemas(df_train, LONG_SCHEMA_PATH, GROUP_BY_COLUMN, LONG_SCHEMA_PREFIX, SCHEMA_WIDTH)
+    df_val = add_fractal_long_schemas(df_val, LONG_SCHEMA_PATH, GROUP_BY_COLUMN, LONG_SCHEMA_PREFIX, SCHEMA_WIDTH)
+    df_test = add_fractal_long_schemas(df_test, LONG_SCHEMA_PATH, GROUP_BY_COLUMN, LONG_SCHEMA_PREFIX, SCHEMA_WIDTH)
 
     print("Dodawanie cech cykli cenowych")
-    df_train = add_cycle_columns(df_train, group_by_column, width)
-    df_val = add_cycle_columns(df_val, group_by_column, width)
-    df_test = add_cycle_columns(df_test, group_by_column, width)
-
-    ema_periods = [10, 20, 50, 100, 200]
+    df_train = add_cycle_columns(df_train, GROUP_BY_COLUMN, SCHEMA_WIDTH)
+    df_val = add_cycle_columns(df_val, GROUP_BY_COLUMN, SCHEMA_WIDTH)
+    df_test = add_cycle_columns(df_test, GROUP_BY_COLUMN, SCHEMA_WIDTH)
 
     print("Dodawanie cech średniej kroczącej")
-    df_train = add_ema_columns(df_train, group_by_column, ema_periods)
-    df_val = add_ema_columns(df_val, group_by_column, ema_periods)
-    df_test = add_ema_columns(df_test, group_by_column, ema_periods)
-
-    functions_path = 'Wskaźniki itp/Schemat stała długość'
+    df_train = add_ema_columns(df_train, GROUP_BY_COLUMN, EMA_PERIODS)
+    df_val = add_ema_columns(df_val, GROUP_BY_COLUMN, EMA_PERIODS)
+    df_test = add_ema_columns(df_test, GROUP_BY_COLUMN, EMA_PERIODS)
 
     print("Dodawanie cech fraktalnych o stałej długości")
-    df_train = add_fractal_short_schemas(df_train, functions_path, group_by_column, "short_formation_")
-    df_val = add_fractal_short_schemas(df_val, functions_path, group_by_column, "short_formation_")
-    df_test = add_fractal_short_schemas(df_test, functions_path, group_by_column, "short_formation_")
+    df_train = add_fractal_short_schemas(df_train, SHORT_SCHEMA_PATH, GROUP_BY_COLUMN, SHORT_SCHEMA_PREFIX)
+    df_val = add_fractal_short_schemas(df_val, SHORT_SCHEMA_PATH, GROUP_BY_COLUMN, SHORT_SCHEMA_PREFIX)
+    df_test = add_fractal_short_schemas(df_test, SHORT_SCHEMA_PATH, GROUP_BY_COLUMN, SHORT_SCHEMA_PREFIX)
 
     print("Usuwanie pustych kolumn")
     df_train, df_val, df_test = remove_empty_columns(df_train, df_val, df_test)
     
-    train_columns_path = 'scalers/train_columns.pkl'
-
     print("Zapisywanie kolumn treningowych")
-    save_object(df_train.columns, train_columns_path)
+    save_object(df_train.columns, TRAIN_COLUMNS_PATH)
     
-    columns_to_standardize = ["adjusted_close", "close", "high", "low", "open", "volume"]
-
     print("Standaryzacja kolumn")
     df_train.volume = df_train.volume.astype(float)
     df_val.volume = df_val.volume.astype(float)
     df_test.volume = df_test.volume.astype(float)
 
-    df_train, scalers = standardize_training_columns(df_train, columns_to_standardize, group_by_column)
-    df_val = standardize_columns(df_val, scalers, columns_to_standardize, group_by_column)
-    df_test = standardize_columns(df_test, scalers, columns_to_standardize, group_by_column)
+    df_train, scalers = standardize_training_columns(df_train, COLUMNS_TO_STANDARDIZE, GROUP_BY_COLUMN)
+    df_val = standardize_columns(df_val, scalers, COLUMNS_TO_STANDARDIZE, GROUP_BY_COLUMN)
+    df_test = standardize_columns(df_test, scalers, COLUMNS_TO_STANDARDIZE, GROUP_BY_COLUMN)
     
-    scalers_path = 'scalers/scalers.pkl'
-
     print("Zapisywanie obiektów skalujących")
-    save_object(scalers, scalers_path)
-    
-    columns = [col for col in df_train.columns if not col.startswith("name")]
-    target_column = "close"
-    sort_columns = ["date_year", "date_month", "date_day_of_month"]
-    n = 20
-    max_target_horizon = 5
+    save_object(scalers, SCALERS_PATH)
+
+    columns_to_shift = [col for col in df_train.columns if not col.startswith("name")]
     
     print("Tworzenie szeregów czasowych")
-    train_sets = create_time_series_set(df_train, columns, group_by_column, target_column, sort_columns, n, max_target_horizon)
-    val_sets = create_time_series_set(df_val, columns, group_by_column, target_column, sort_columns, n, max_target_horizon)
-    test_sets = create_time_series_set(df_test, columns, group_by_column, target_column, sort_columns, n, max_target_horizon)
+    train_sets = create_time_series_set(df_train, columns_to_shift, GROUP_BY_COLUMN, TARGET_COLUMN, SORT_COLUMNS, TIME_SERIES_LENGTH, MAX_TARGET_HORIZON)
+    val_sets = create_time_series_set(df_val, columns_to_shift, GROUP_BY_COLUMN, TARGET_COLUMN, SORT_COLUMNS, TIME_SERIES_LENGTH, MAX_TARGET_HORIZON)
+    test_sets = create_time_series_set(df_test, columns_to_shift, GROUP_BY_COLUMN, TARGET_COLUMN, SORT_COLUMNS, TIME_SERIES_LENGTH, MAX_TARGET_HORIZON)
 
     print("Wyodrębnianie zmiennej celu")
-    train_sets, y_train_sets = get_target_columns(train_sets, max_target_horizon)
-    val_sets, y_val_sets = get_target_columns(val_sets, max_target_horizon)
-    test_sets, y_test_sets = get_target_columns(test_sets, max_target_horizon)
+    train_sets, y_train_sets = get_target_columns(train_sets, MAX_TARGET_HORIZON)
+    val_sets, y_val_sets = get_target_columns(val_sets, MAX_TARGET_HORIZON)
+    test_sets, y_test_sets = get_target_columns(test_sets, MAX_TARGET_HORIZON)
     
     columns_to_drop = ["name"]
 
     print("Usuwanie kolumny z nazwą")
-    train_sets = drop_columns_from_sets(train_sets, max_target_horizon, columns_to_drop)
-    val_sets = drop_columns_from_sets(val_sets, max_target_horizon, columns_to_drop)
-    test_sets = drop_columns_from_sets(test_sets, max_target_horizon, columns_to_drop)
+    train_sets = drop_columns_from_sets(train_sets, MAX_TARGET_HORIZON, columns_to_drop)
+    val_sets = drop_columns_from_sets(val_sets, MAX_TARGET_HORIZON, columns_to_drop)
+    test_sets = drop_columns_from_sets(test_sets, MAX_TARGET_HORIZON, columns_to_drop)
     
-    save_directory = "datasets"
-
     print("Zapisywanie zbiorów danych")
-    save_data_sets(train_sets, y_train_sets, save_directory, "df_train", "y_train")
-    save_data_sets(val_sets, y_val_sets, save_directory, "df_val", "y_val")
-    save_data_sets(test_sets, y_test_sets, save_directory, "df_test", "y_test")
+    save_data_sets(train_sets, y_train_sets, DATA_OUTPUT_DIRECTORY, X_TRAIN_OUTPUT_NAME, Y_TRAIN_OUTPUT_NAME)
+    save_data_sets(val_sets, y_val_sets, DATA_OUTPUT_DIRECTORY, X_VAL_OUTPUT_NAME, Y_VAL_OUTPUT_NAME)
+    save_data_sets(test_sets, y_test_sets, DATA_OUTPUT_DIRECTORY, X_TEST_OUTPUT_NAME, Y_TEST_OUTPUT_NAME)
 
     print("Zakończono przetwarzanie")
     

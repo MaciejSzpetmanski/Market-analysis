@@ -224,7 +224,7 @@ def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
     res_data = pd.concat([df.reset_index(drop=True)] + [pd.Series(value, name=key) for key, value in new_columns.items()], axis=1)
     return res_data
 
-functions_path = 'Wskaźniki itp/Schemat zmienna długość'
+functions_path = 'indicators/Schemat zmienna długość'
 group_by_column = 'name'
 width = 20
 
@@ -252,7 +252,7 @@ for col in df_train.columns:
 
 import sys
 
-sys.path.append(os.path.abspath("Wskaźniki itp"))
+sys.path.append(os.path.abspath("indicators"))
 from cykl import wykryj_typ_cyklu
 
 def add_cycle_columns(df, group_by_column, width):
@@ -355,7 +355,7 @@ def add_fractal_short_schemas(df, path, group_by_column, prefix):
     res_data = pd.concat([df.reset_index(drop=True)] + [pd.Series(value, name=key) for key, value in new_columns.items()], axis=1)
     return res_data
 
-functions_path = os.path.join(path, 'Wskaźniki itp/Schemat stała długość')
+functions_path = os.path.join(path, 'indicators/Schemat stała długość')
 group_by_column = 'name'
 
 df_train = add_fractal_short_schemas(df_train, functions_path, group_by_column, 'short_formation_')

@@ -1,18 +1,5 @@
-import os
-import numpy as np
 import pandas as pd
-from feature_engine.datetime import DatetimeFeatures
-from sklearn.model_selection import train_test_split
-import warnings
-import importlib.util
-import sys
-sys.path.append(os.path.abspath("Wskaźniki itp"))
-from cykl import wykryj_typ_cyklu
-from EMA import ema
-from sklearn.preprocessing import StandardScaler
-import pickle
-from data_pipeline import *
-import data_pipeline
+import data_pipeline as dp
 
 #%%
 
@@ -21,13 +8,9 @@ def create_time_series_vector(data, columns, n):
     for i in range(1, n):
         for col in columns:
             shifted_columns[col + "_" + str(i)] = data[col].shift(-i)
-    date_columns = [col for col in columns if col.startswith("date")]
-    # for col in date_columns:
-    #     shifted_columns[col + "_y"] = data.groupby(group_by_column, group_keys=False)[col].shift(-(n-1+k))
-    # target column
     res_data = pd.concat([data] + [pd.Series(value, name=key) for key, value in shifted_columns.items()], axis=1)
     # removing rows with missing values
-    res_data = res_data.groupby(group_by_column, group_keys=False).head(-(n-1))
+    res_data = res_data.head(-(n-1))
     last_row = res_data.tail(1).reset_index(drop=True)
     return last_row
 
@@ -39,10 +22,10 @@ def create_date_vector(date):
     df_date = pd.DataFrame()
     df_date["date"] = [date]
     df_date["date"] = pd.to_datetime(df_date["date"])
-    df_date = add_time_columns(df_date)
+    df_date = dp.add_time_columns(df_date)
     return df_date
 
-def create_preddiction_date_vector(date):
+def create_prediction_date_vector(date):
     y_date = create_date_vector(date)
     y_date = y_date.drop(columns=["date"])
     y_date = y_date.add_suffix('_y')
@@ -50,75 +33,62 @@ def create_preddiction_date_vector(date):
 
 #%%
 
-def prepare_data_for_prediction(path, name, date):
-    path = "data/^DJI_data_1d.csv"
-    df = data_pipeline.load_data_from_file(path)
+def prepare_data_for_prediction(path, name):
+    path = "data/^DJI_data_1d.csv" # example
+    df = dp.load_data_from_file(path)
     # TODO checking input data size
-    df = data_pipeline.convert_column_types(df)
-    df = add_time_columns(df)
+    df = dp.convert_column_types(df)
+    df = dp.add_time_columns(df)
     
     df = df.sort_values(by=["date"])
     
     # TODO trimming, filtering data
-    df = df.tail(20).reset_index(drop=True)
+    df = df.tail(dp.TIME_SERIES_LENGTH * 2).reset_index(drop=True)
     
-    columns = load_object("scalers/train_columns.pkl")
+    columns = dp.load_object(dp.TRAIN_COLUMNS_PATH)
     name_columns = [col for col in columns if col.startswith("name_")]
-    name = "^DJI"
+    name = "^DJI" # example
     for col in name_columns:
         df[col] = 0
     df[f"name_{name}"] = 1
-    # artificially add name column for groupping
+    # artificially add name column for grouping
     df["name"] = name
     
-    functions_path = 'Wskaźniki itp/Schemat zmienna długość'
-    group_by_column = 'name'
-    width = 20
-
     print("Dodawanie cech fraktalnych o zmiennej długości")
-    df = add_fractal_long_schemas(df, functions_path, group_by_column, "long_formation_", width)
+    df = dp.add_fractal_long_schemas(df, dp.LONG_SCHEMA_PATH, dp.GROUP_BY_COLUMN, dp.LONG_SCHEMA_PREFIX, dp.SCHEMA_WIDTH)
     print("Dodawanie cech cykli cenowych")
-    df = add_cycle_columns(df, group_by_column, width)
+    df = dp.add_cycle_columns(df, dp.GROUP_BY_COLUMN, dp.SCHEMA_WIDTH)
     
-    ema_periods = [10, 20, 50, 100, 200]
-
     print("Dodawanie cech średniej kroczącej")
-    df = add_ema_columns(df, group_by_column, ema_periods)
+    df = dp.add_ema_columns(df, dp.GROUP_BY_COLUMN, dp.EMA_PERIODS)
     
-    functions_path = 'Wskaźniki itp/Schemat stała długość'
-
     print("Dodawanie cech fraktalnych o stałej długości")
-    df = add_fractal_short_schemas(df, functions_path, group_by_column, "short_formation_")
+    df = dp.add_fractal_short_schemas(df, dp.SHORT_SCHEMA_PATH, dp.GROUP_BY_COLUMN, dp.SHORT_SCHEMA_PREFIX)
     
     print("Wybór kolumn")
-    # TODO niewykryte kolumny (cykle)
     missing_columns = [col for col in columns if col not in df.columns]
     for col in missing_columns:
         df[col] = 0
     df = df[columns] # removing date, setting order of columns
     
-    columns_to_standarize = ["adjusted_close", "close", "high", "low", "open", "volume"]
-
-    scalers = load_object("scalers/scalers.pkl")
+    scalers = dp.load_object(dp.SCALERS_PATH)
 
     print("Standaryzacja kolumn")
     df.volume = df.volume.astype(float)
-    df = standardize_columns(df, scalers, columns_to_standarize, group_by_column)
+    df = dp.standardize_columns(df, scalers, dp.COLUMNS_TO_STANDARDIZE, dp.GROUP_BY_COLUMN)
 
     print("Tworzenie szeregów czasowych")
-    columns = [col for col in df.columns if not col.startswith("name")]
-    n = 20
-    output_vector = create_time_series_vector(df, columns, n)
+    columns_to_shift = [col for col in df.columns if not col.startswith("name")]
+    output_vector = create_time_series_vector(df, columns_to_shift, dp.TIME_SERIES_LENGTH)
     
     columns_to_drop = ["name"]
     print("Usuwanie kolumny z nazwą")
     output_vector = output_vector.drop(columns=columns_to_drop)
-    
-    # prediction date
-    y_date = create_preddiction_date_vector(date)
-    
-    result = pd.concat([output_vector, y_date], axis=1)
-    
-    return result
+    return output_vector
 
+def merge_vector_with_pred_date(x_vector, date):
+    date = "2024-09-30" # example
+    y_date = create_prediction_date_vector(date)
+    result = pd.concat([x_vector, y_date], axis=1)
+    return result
     
