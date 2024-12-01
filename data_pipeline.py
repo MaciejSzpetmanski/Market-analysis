@@ -19,7 +19,7 @@ NAME_TO_REMOVE = "EURGBP=X"
 GROUP_BY_COLUMN = "name"
 LONG_SCHEMA_PATH = "indicators/Schemat zmienna długość"
 LONG_SCHEMA_PREFIX = "long_formation_"
-SCHEMA_WIDTH = 3 #10 #5 #20
+SCHEMA_WIDTH = 5 #3 #10 #5 #20
 EMA_PERIODS = [10, 20, 50, 100, 200]
 SHORT_SCHEMA_PATH = "indicators/Schemat stała długość"
 SHORT_SCHEMA_PREFIX = "short_formation_"
@@ -28,7 +28,7 @@ COLUMNS_TO_STANDARDIZE = ["adjusted_close", "close", "high", "low", "open", "vol
 SCALERS_PATH = "scalers/scalers.pkl"
 TARGET_COLUMN = "close"
 SORT_COLUMNS = ["date_year", "date_month", "date_day_of_month"]
-TIME_SERIES_LENGTH = 3 #10 #5 #20
+TIME_SERIES_LENGTH = 5 #3 #10 #5 #20
 MAX_TARGET_HORIZON = 5
 DATA_OUTPUT_DIRECTORY = "datasets"
 X_TRAIN_OUTPUT_NAME = "df_train"
@@ -376,6 +376,18 @@ def pipeline():
     print("Podział na zbiory")
     df_train, df_val, df_test = split_data(df)
     
+    print("Standaryzacja kolumn")
+    df_train.volume = df_train.volume.astype(float)
+    df_val.volume = df_val.volume.astype(float)
+    df_test.volume = df_test.volume.astype(float)
+
+    df_train, scalers = standardize_training_columns(df_train, COLUMNS_TO_STANDARDIZE, GROUP_BY_COLUMN)
+    df_val = standardize_columns(df_val, scalers, COLUMNS_TO_STANDARDIZE, GROUP_BY_COLUMN)
+    df_test = standardize_columns(df_test, scalers, COLUMNS_TO_STANDARDIZE, GROUP_BY_COLUMN)
+    
+    print("Zapisywanie obiektów skalujących")
+    save_object(scalers, SCALERS_PATH)
+    
     print("Dodawanie cech fraktalnych o zmiennej długości")
     df_train = add_fractal_long_schemas(df_train, LONG_SCHEMA_PATH, GROUP_BY_COLUMN, LONG_SCHEMA_PREFIX, SCHEMA_WIDTH)
     df_val = add_fractal_long_schemas(df_val, LONG_SCHEMA_PATH, GROUP_BY_COLUMN, LONG_SCHEMA_PREFIX, SCHEMA_WIDTH)
@@ -403,18 +415,6 @@ def pipeline():
     print("Zapisywanie kolumn treningowych")
     save_object(df_train.columns, TRAIN_COLUMNS_PATH)
     
-    print("Standaryzacja kolumn")
-    df_train.volume = df_train.volume.astype(float)
-    df_val.volume = df_val.volume.astype(float)
-    df_test.volume = df_test.volume.astype(float)
-
-    df_train, scalers = standardize_training_columns(df_train, COLUMNS_TO_STANDARDIZE, GROUP_BY_COLUMN)
-    df_val = standardize_columns(df_val, scalers, COLUMNS_TO_STANDARDIZE, GROUP_BY_COLUMN)
-    df_test = standardize_columns(df_test, scalers, COLUMNS_TO_STANDARDIZE, GROUP_BY_COLUMN)
-    
-    print("Zapisywanie obiektów skalujących")
-    save_object(scalers, SCALERS_PATH)
-
     columns_to_shift = [col for col in df_train.columns if not col.startswith("name")]
     
     print("Tworzenie szeregów czasowych")

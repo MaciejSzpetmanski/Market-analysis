@@ -59,8 +59,8 @@ y_test_list = [y_test_1, y_test_2, y_test_3, y_test_4, y_test_5]
 
 #%% train
 
-df_train = df_train_5
-y_train = y_train_5
+df_train = df_train_1
+y_train = y_train_1
 
 for col in df_train.columns:
     if (df_train[col] == y_train.y).all():
@@ -68,8 +68,8 @@ for col in df_train.columns:
         
 #%% val
 
-df_val = df_val_5
-y_val = y_val_5
+df_val = df_val_1
+y_val = y_val_1
 
 for col in df_val.columns:
     if (df_val[col] == y_val.y).all():
@@ -77,8 +77,8 @@ for col in df_val.columns:
         
 #%% test
 
-df_test = df_test_5
-y_test = y_test_5
+df_test = df_test_1
+y_test = y_test_1
 
 for col in df_test.columns:
     if (df_test[col] == y_test.y).all():
@@ -177,7 +177,7 @@ print(f"Mean Squared Error: {mse}")
 print(f"R-squared: {r2}")
 
 # Display model coefficients
-print("Coefficients:", model.coef_)
+# print("Coefficients:", model.coef_)
 print("Intercept:", model.intercept_)
 
 eval_results = evaluate_model(model, x_test_list, y_test_list)

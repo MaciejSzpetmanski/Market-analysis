@@ -52,6 +52,11 @@ def prepare_data_for_prediction(path, name):
     # artificially add name column for grouping
     df["name"] = name
     
+    print("Standaryzacja kolumn")
+    scalers = dp.load_object(dp.SCALERS_PATH)
+    df.volume = df.volume.astype(float)
+    df = dp.standardize_columns(df, scalers, dp.COLUMNS_TO_STANDARDIZE, dp.GROUP_BY_COLUMN)
+    
     print("Dodawanie cech fraktalnych o zmiennej długości")
     df = dp.add_fractal_long_schemas(df, dp.LONG_SCHEMA_PATH, dp.GROUP_BY_COLUMN, dp.LONG_SCHEMA_PREFIX, dp.SCHEMA_WIDTH)
     print("Dodawanie cech cykli cenowych")
@@ -69,12 +74,6 @@ def prepare_data_for_prediction(path, name):
         df[col] = 0
     df = df[columns] # removing date, setting order of columns
     
-    scalers = dp.load_object(dp.SCALERS_PATH)
-
-    print("Standaryzacja kolumn")
-    df.volume = df.volume.astype(float)
-    df = dp.standardize_columns(df, scalers, dp.COLUMNS_TO_STANDARDIZE, dp.GROUP_BY_COLUMN)
-
     print("Tworzenie szeregów czasowych")
     columns_to_shift = [col for col in df.columns if not col.startswith("name")]
     output_vector = create_time_series_vector(df, columns_to_shift, dp.TIME_SERIES_LENGTH)
