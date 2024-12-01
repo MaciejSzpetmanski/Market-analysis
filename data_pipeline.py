@@ -19,7 +19,7 @@ NAME_TO_REMOVE = "EURGBP=X"
 GROUP_BY_COLUMN = "name"
 LONG_SCHEMA_PATH = "indicators/Schemat zmienna długość"
 LONG_SCHEMA_PREFIX = "long_formation_"
-SCHEMA_WIDTH = 20
+SCHEMA_WIDTH = 3 #10 #5 #20
 EMA_PERIODS = [10, 20, 50, 100, 200]
 SHORT_SCHEMA_PATH = "indicators/Schemat stała długość"
 SHORT_SCHEMA_PREFIX = "short_formation_"
@@ -28,7 +28,7 @@ COLUMNS_TO_STANDARDIZE = ["adjusted_close", "close", "high", "low", "open", "vol
 SCALERS_PATH = "scalers/scalers.pkl"
 TARGET_COLUMN = "close"
 SORT_COLUMNS = ["date_year", "date_month", "date_day_of_month"]
-TIME_SERIES_LENGTH = 20
+TIME_SERIES_LENGTH = 3 #10 #5 #20
 MAX_TARGET_HORIZON = 5
 DATA_OUTPUT_DIRECTORY = "datasets"
 X_TRAIN_OUTPUT_NAME = "df_train"
@@ -168,7 +168,7 @@ def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
     res_data = pd.concat([df] + [pd.Series(value, name=key) for key, value in new_columns.items()], axis=1)
     return res_data
 
-def add_cycle_columns(df, group_by_column, width):
+def add_cycle_columns(df, group_by_column, width=10):
     """
     dodaje do ramki danych kolumny z informacją o cyklu w danych cenowych
     :param df: ramka danych z kolumnami 'close', 'high', 'low', 'open', 'adjusted_close'
@@ -176,13 +176,13 @@ def add_cycle_columns(df, group_by_column, width):
     :param width: ilość obserwacji, na których będzie wykrywany cykl
     :return: ramka danych z dodanymi kolumnami
     """
-    def _apply_cycle_function(df, width):
+    def _apply_cycle_function(df, width=10):
         n = len(df)
         res = np.full(n, "", dtype=object)
         for i in range(width-1, n):
             data = df[i+1-width:i+1]
             # get cycle name only
-            res[i] = wykryj_typ_cyklu(data)[1]
+            res[i] = wykryj_typ_cyklu(data, okres=width)[1]
         return res
     
     cycle_names = {
@@ -382,6 +382,7 @@ def pipeline():
     df_test = add_fractal_long_schemas(df_test, LONG_SCHEMA_PATH, GROUP_BY_COLUMN, LONG_SCHEMA_PREFIX, SCHEMA_WIDTH)
 
     print("Dodawanie cech cykli cenowych")
+    # requires 10 records by default
     df_train = add_cycle_columns(df_train, GROUP_BY_COLUMN, SCHEMA_WIDTH)
     df_val = add_cycle_columns(df_val, GROUP_BY_COLUMN, SCHEMA_WIDTH)
     df_test = add_cycle_columns(df_test, GROUP_BY_COLUMN, SCHEMA_WIDTH)

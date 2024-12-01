@@ -109,10 +109,10 @@ def merge_sets(k, x_sets_list, y_sets_list):
 #%% preparing trimmed data
 
 k = 1
-k = 2
-k = 3
-k = 4
-k = 5
+# k = 2
+# k = 3
+# k = 4
+# k = 5
 
 df_train, y_train = merge_sets(k, x_train_list, y_train_list)
 df_val, y_val = merge_sets(k, x_val_list, y_val_list)
@@ -267,6 +267,7 @@ plt.show()
 #%% bagging
 
 from sklearn.ensemble import BaggingRegressor
+from sklearn.tree import DecisionTreeRegressor
 
 base_model = DecisionTreeRegressor(random_state=42)
 

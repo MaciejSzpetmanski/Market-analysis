@@ -34,7 +34,6 @@ def create_prediction_date_vector(date):
 #%%
 
 def prepare_data_for_prediction(path, name):
-    path = "data/^DJI_data_1d.csv" # example
     df = dp.load_data_from_file(path)
     # TODO checking input data size
     df = dp.convert_column_types(df)
@@ -43,11 +42,10 @@ def prepare_data_for_prediction(path, name):
     df = df.sort_values(by=["date"])
     
     # TODO trimming, filtering data
-    df = df.tail(dp.TIME_SERIES_LENGTH * 2).reset_index(drop=True)
+    df = df.tail(dp.TIME_SERIES_LENGTH + dp.SCHEMA_WIDTH - 1).reset_index(drop=True)
     
     columns = dp.load_object(dp.TRAIN_COLUMNS_PATH)
     name_columns = [col for col in columns if col.startswith("name_")]
-    name = "^DJI" # example
     for col in name_columns:
         df[col] = 0
     df[f"name_{name}"] = 1
@@ -87,8 +85,17 @@ def prepare_data_for_prediction(path, name):
     return output_vector
 
 def merge_vector_with_pred_date(x_vector, date):
-    date = "2024-09-30" # example
     y_date = create_prediction_date_vector(date)
     result = pd.concat([x_vector, y_date], axis=1)
     return result
+    
+def main():
+    path = "data/^DJI_data_1d.csv" # example
+    name = "^DJI" # example
+    date = "2024-09-30" # example
+    x = prepare_data_for_prediction(path, name)
+    x = merge_vector_with_pred_date(x, date)
+    
+if __name__ == "__main__":
+    main()
     
