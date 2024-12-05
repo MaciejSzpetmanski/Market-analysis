@@ -9,6 +9,7 @@ os.chdir(path)
 #%% reading data
 
 import pandas as pd
+import numpy as np
 
 # df_train = pd.read_csv("datasets/df_train.csv")
 # df_val = pd.read_csv("datasets/df_val.csv")
@@ -125,8 +126,6 @@ from sklearn.metrics import mean_squared_error, r2_score
 def evaluate_model(model, x_test_list, y_test_list):
     res = {}
     for i in range(len(x_test_list)):
-        # decide about error (cumulative or not)
-        # x, y = merge_sets(i, x_test_list, y_test_list)
         x = x_test_list[i]
         y = y_test_list[i]
         y_pred = model.predict(x)
@@ -134,6 +133,24 @@ def evaluate_model(model, x_test_list, y_test_list):
         r2 = r2_score(y, y_pred)
         res[i] = {"mse": mse, "r2": r2}
     return res
+
+def evaluate_model_by_names(model, x_test_list, y_test_list):
+    name_columns = [col for col in x_test_list[0].columns if col.startswith("name")]
+    results = {}
+    for col in name_columns:
+        x_test_list_filtered = [x_test[x_test[col] == 1] for x_test in x_test_list]
+        indexes = [x_test.index for x_test in x_test_list_filtered]
+        y_test_list_filtered = [y_test.iloc[index_list] for index_list, y_test in zip(indexes, y_test_list)]
+        eval_res = evaluate_model(model, x_test_list_filtered, y_test_list_filtered)
+        name = col.lstrip("name_")
+        results[name] = eval_res
+    return results
+
+def print_eval_results(eval_results):
+    for key, value in eval_results.items():
+        print(key)
+        print(value)
+        print()
 
 #%% plot results for one name
 
@@ -159,6 +176,12 @@ def plot_all_prediction(name, model, x_test_list, y_test_list):
         x = x_test_list[i]
         y = y_test_list[i]
         plot_prediction(name, model, x, y)
+        
+def plot_prediction_by_names(model, x_test_list, y_test_list):
+    name_columns = [col for col in x_test_list[0].columns if col.startswith("name")]
+    for col in name_columns:
+        name = col.lstrip("name_")
+        plot_all_prediction(name, model, x_test_list, y_test_list)
 
 #%% linear regression
 
@@ -182,9 +205,12 @@ print("Intercept:", model.intercept_)
 
 eval_results = evaluate_model(model, x_test_list, y_test_list)
 print(eval_results)
+full_eval_results = evaluate_model_by_names(model, x_test_list, y_test_list)
+print_eval_results(full_eval_results)
 
 name = "AAPL"
 plot_all_prediction(name, model, x_test_list, y_test_list)
+plot_prediction_by_names(model, x_test_list, y_test_list)
 
 #%% tree
 
@@ -210,9 +236,12 @@ for name, importance in zip(df_test.columns, feature_importances):
         
 eval_results = evaluate_model(model, x_test_list, y_test_list)
 print(eval_results)
+full_eval_results = evaluate_model_by_names(model, x_test_list, y_test_list)
+print_eval_results(full_eval_results)
 
 name = "AAPL"
 plot_all_prediction(name, model, x_test_list, y_test_list)
+plot_prediction_by_names(model, x_test_list, y_test_list)
 
 #%% random forest
 
@@ -232,9 +261,12 @@ print(f"R-squared: {r2}")
 
 eval_results = evaluate_model(model, x_test_list, y_test_list)
 print(eval_results)
+full_eval_results = evaluate_model_by_names(model, x_test_list, y_test_list)
+print_eval_results(full_eval_results)
 
 name = "AAPL"
 plot_all_prediction(name, model, x_test_list, y_test_list)
+plot_prediction_by_names(model, x_test_list, y_test_list)
 
 #%% xgboost
 
@@ -255,9 +287,12 @@ print(f"R-squared: {r2}")
 
 eval_results = evaluate_model(model, x_test_list, y_test_list)
 print(eval_results)
+full_eval_results = evaluate_model_by_names(model, x_test_list, y_test_list)
+print_eval_results(full_eval_results)
 
 name = "AAPL"
 plot_all_prediction(name, model, x_test_list, y_test_list)
+plot_prediction_by_names(model, x_test_list, y_test_list)
 
 #%% trim
 
@@ -288,25 +323,12 @@ print(f"R-squared: {r2}")
 
 eval_results = evaluate_model(model, x_test_list, y_test_list)
 print(eval_results)
+full_eval_results = evaluate_model_by_names(model, x_test_list, y_test_list)
+print_eval_results(full_eval_results)
 
 name = "AAPL"
 plot_all_prediction(name, model, x_test_list, y_test_list)
-
-#%% SVR
-
-from sklearn.svm import SVR
-
-svr_model = SVR(kernel='rbf', C=100, epsilon=0.1)
-
-svr_model.fit(df_train, y_train)
-
-y_pred = svr_model.predict(df_test)
-
-mse = mean_squared_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
-
-print(f"Mean Squared Error: {mse}")
-print(f"R-squared: {r2}")
+plot_prediction_by_names(model, x_test_list, y_test_list)
 
 #%% plot results - on day forward
 
