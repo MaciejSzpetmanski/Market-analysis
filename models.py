@@ -1,6 +1,7 @@
 #%% working directory
 
 import os
+import joblib
 
 path = "D:\Studia\semestr7\inźynierka\Market-analysis"
 # path = "C:\Studia\Market-analysis"
@@ -211,6 +212,76 @@ print_eval_results(full_eval_results)
 name = "AAPL"
 plot_all_prediction(name, model, x_test_list, y_test_list)
 plot_prediction_by_names(model, x_test_list, y_test_list)
+
+#%% parameters for ElasticNet
+
+from sklearn.linear_model import ElasticNet
+
+# alphas = [0.01, 0.1, 1, 10]
+# l1_ratios = [0.2, 0.5, 0.8]
+
+alphas = [0.001, 0.003, 0.005, 0.008, 0.01, 0.02]
+l1_ratios = [0.2, 0.5, 0.8, 0.9]
+
+best_params = {}
+best_val_mse = float('inf')
+best_model = None
+
+for alpha in alphas:
+    for l1_ratio in l1_ratios:
+        model = ElasticNet(alpha=alpha, l1_ratio=l1_ratio, random_state=42)
+        model.fit(df_train, y_train)
+        y_val_pred = model.predict(df_val)
+        val_mse = mean_squared_error(y_val, y_val_pred)
+        print(f"Alpha: {alpha}, L1 Ratio: {l1_ratio}, Validation MSE: {val_mse}")
+        eval_results = evaluate_model(model, x_val_list, y_val_list)
+        print(eval_results)
+        print()
+        if val_mse < best_val_mse:
+            best_val_mse = val_mse
+            best_params = {'alpha': alpha, 'l1_ratio': l1_ratio}
+            best_model = model
+
+print("Best Parameters:", best_params)
+print("Best Validation MSE:", best_val_mse)
+
+# Best Parameters: {'alpha': 0.01, 'l1_ratio': 0.8}
+# Best Parameters: {'alpha': 0.003, 'l1_ratio': 0.8}
+
+#%% ElasticNet evaluation
+
+model = ElasticNet(alpha=0.003, l1_ratio=0.8, random_state=42)
+model.fit(df_train, y_train)
+
+y_pred = model.predict(df_test)
+
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f"Mean Squared Error: {mse}")
+print(f"R-squared: {r2}")
+
+# print("Coefficients:", model.coef_)
+print("Intercept:", model.intercept_)
+
+eval_results = evaluate_model(model, x_test_list, y_test_list)
+print(eval_results)
+full_eval_results = evaluate_model_by_names(model, x_test_list, y_test_list)
+print_eval_results(full_eval_results)
+
+name = "AAPL"
+plot_all_prediction(name, model, x_test_list, y_test_list)
+plot_prediction_by_names(model, x_test_list, y_test_list)
+
+non_zero_features = df_train.columns[model.coef_ != 0]
+print(non_zero_features)
+
+for name, coef in zip(df_train.columns, model.coef_):
+    if coef != 0:
+        print(f"{name}: {coef:.4f}")
+        
+joblib.dump(model, "models/elasticnet_model.pkl")
+model = joblib.load("models/elasticnet_model.pkl")
 
 #%% tree
 
