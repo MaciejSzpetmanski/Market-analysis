@@ -367,6 +367,8 @@ def pipeline():
     # OPTIONAL remove EURGBP=X dataset
     df = remove_name_values(df, NAME_TO_REMOVE)
     
+    df = df.sort_values(by=["name", "date"])
+    
     # OPTIONAL validation
 
     print("Dodawanie kolumn czasowych")

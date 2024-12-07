@@ -158,9 +158,9 @@ def print_eval_results(eval_results):
 import matplotlib.pyplot as plt
 
 def plot_prediction(name, model, x, y):
-    # TODO add k and model name to title, possibly time
     name_index = x[x[f"name_{name}"] == 1].index
     y_name = y.iloc[name_index]
+    y_pred = model.predict(x)
     pred_name = y_pred[name_index]
     plt.figure(figsize=(10, 6))
     plt.scatter(name_index, y_name, alpha=0.7, label='original', color='blue')
@@ -248,7 +248,7 @@ print("Best Validation MSE:", best_val_mse)
 # Best Parameters: {'alpha': 0.01, 'l1_ratio': 0.8}
 # Best Parameters: {'alpha': 0.003, 'l1_ratio': 0.8}
 
-#%% ElasticNet evaluation
+#%% tuned ElasticNet
 
 model = ElasticNet(alpha=0.003, l1_ratio=0.8, random_state=42)
 model.fit(df_train, y_train)
@@ -283,37 +283,6 @@ for name, coef in zip(df_train.columns, model.coef_):
 joblib.dump(model, "models/elasticnet_model.pkl")
 model = joblib.load("models/elasticnet_model.pkl")
 
-#%% tree
-
-from sklearn.tree import DecisionTreeRegressor
-
-model = DecisionTreeRegressor(random_state=42, max_depth=5)
-
-model.fit(df_train, y_train)
-
-y_pred = model.predict(df_test)
-
-mse = mean_squared_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
-
-print(f"Mean Squared Error: {mse}")
-print(f"R-squared: {r2}")
-
-feature_importances = model.feature_importances_
-print("Feature Importances:")
-for name, importance in zip(df_test.columns, feature_importances):
-    if importance > 0:
-        print(f"{name}: {importance:.4f}")
-        
-eval_results = evaluate_model(model, x_test_list, y_test_list)
-print(eval_results)
-full_eval_results = evaluate_model_by_names(model, x_test_list, y_test_list)
-print_eval_results(full_eval_results)
-
-name = "AAPL"
-plot_all_prediction(name, model, x_test_list, y_test_list)
-plot_prediction_by_names(model, x_test_list, y_test_list)
-
 #%% random forest
 
 from sklearn.ensemble import RandomForestRegressor
@@ -338,6 +307,99 @@ print_eval_results(full_eval_results)
 name = "AAPL"
 plot_all_prediction(name, model, x_test_list, y_test_list)
 plot_prediction_by_names(model, x_test_list, y_test_list)
+
+#%% fine-tuning random forest
+
+from sklearn.model_selection import GridSearchCV
+
+# param_grid = {
+#     'n_estimators': [100, 200, 300],
+#     'max_depth': [10, 20, None],
+# }
+
+param_grid = {
+    'n_estimators': [250, 300, 350],
+    'max_depth': [10, 20, None],
+}
+
+grid_search = GridSearchCV(
+    estimator=RandomForestRegressor(random_state=42, n_jobs=-1),
+    param_grid=param_grid,
+    scoring='neg_mean_squared_error',
+    cv=[(slice(None), slice(None))],
+    n_jobs=-1
+)
+
+grid_search.fit(df_train, y_train)
+val_mse = mean_squared_error(y_val, grid_search.best_estimator_.predict(df_val))
+val_r2 = r2_score(y_val, grid_search.best_estimator_.predict(df_val))
+
+print(f"Best Params: {grid_search.best_params_}, Validation MSE: {val_mse}, R-squared: {val_r2}")
+
+# Best Params: {'max_depth': None, 'n_estimators': 300}, Validation MSE: 0.00883993516026214, R-squared: 0.9951073534338416
+# Best Params: {'max_depth': None, 'n_estimators': 350}, Validation MSE: 0.008807718106650759, R-squared: 0.9951251846343953
+
+#%% custom metric
+
+def custom_score(y_true, y_pred):
+    mse = mean_squared_error(y_true, y_pred)
+    r2 = r2_score(y_true, y_pred)
+    return r2 - mse
+
+best_score = float('-inf')
+best_params = None
+best_model = None
+
+for n_estimators in [100, 200, 300]:
+    for max_depth in [10, 20, None]:
+        rf = RandomForestRegressor(n_estimators=n_estimators, max_depth=max_depth, random_state=42, n_jobs=-1)
+        rf.fit(df_train, y_train)
+        
+        val_preds = rf.predict(df_val)
+        score = custom_score(y_val, val_preds)
+        
+        print(f"n_estimators: {n_estimators}, max_depth: {max_depth}, Custom Score: {score}")
+        
+        if score > best_score:
+            best_score = score
+            best_params = {"n_estimators": n_estimators, "max_depth": max_depth}
+            best_model = rf
+
+print(f"\nBest Params: {best_params}, Best Validation Custom Score: {best_score}")
+val_mse = mean_squared_error(y_val, grid_search.best_estimator_.predict(df_val))
+val_r2 = r2_score(y_val, grid_search.best_estimator_.predict(df_val))
+print(f"Best Params: {grid_search.best_params_}, Validation MSE: {val_mse}, R-squared: {val_r2}")
+
+# Best Params: {'n_estimators': 300, 'max_depth': 10}, Best Validation Custom Score: 0.9865146257774043
+
+#%% tuned random forest
+
+model = RandomForestRegressor(n_estimators=350, random_state=42, max_depth=None, n_jobs=-1)
+model = RandomForestRegressor(n_estimators=300, random_state=42, max_depth=10, n_jobs=-1)
+model.fit(df_train, y_train)
+
+y_pred = model.predict(df_test)
+
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f"Mean Squared Error: {mse}")
+print(f"R-squared: {r2}")
+
+eval_results = evaluate_model(model, x_test_list, y_test_list)
+print(eval_results)
+full_eval_results = evaluate_model_by_names(model, x_test_list, y_test_list)
+print_eval_results(full_eval_results)
+
+name = "AAPL"
+plot_all_prediction(name, model, x_test_list, y_test_list)
+plot_prediction_by_names(model, x_test_list, y_test_list)
+
+non_zero_features = df_train.columns[model.coef_ != 0]
+print(non_zero_features)
+
+joblib.dump(model, "models/random_forest_model.pkl")
+model = joblib.load("models/random_forest_model.pkl")
 
 #%% xgboost
 
@@ -370,6 +432,81 @@ plot_prediction_by_names(model, x_test_list, y_test_list)
 xgb.plot_importance(model)
 plt.show()
 
+#%% xgboost tunung
+
+from sklearn.model_selection import GridSearchCV
+
+def custom_score(y_true, y_pred):
+    mse = mean_squared_error(y_true, y_pred)
+    r2 = r2_score(y_true, y_pred)
+    return r2 - mse  
+
+best_score = float('-inf')
+best_params = None
+best_model = None
+
+for n_estimators in [100, 200, 300]:
+    for max_depth in [3, 5, 7]:
+        for learning_rate in [0.01, 0.1, 0.2]:
+            for alpha in [0, 0.1, 1]:
+                    for gamma in [0, 0.1, 1]:
+                        xgb_model = xgb.XGBRegressor(
+                            n_estimators=n_estimators,
+                            max_depth=max_depth,
+                            learning_rate=learning_rate,
+                            alpha=alpha,
+                            gamma=gamma,
+                            n_jobs=-1,
+                            random_state=42
+                        )
+                        xgb_model.fit(df_train, y_train)
+                        
+                        val_preds = xgb_model.predict(df_val)
+                        score = custom_score(y_val, val_preds)
+                        
+                        print(f"n_estimators: {n_estimators}, max_depth: {max_depth}, learning_rate: {learning_rate}, "
+                              f"alpha: {alpha}, gamma: {gamma}, Custom Score: {score}")
+                        
+                        if score > best_score:
+                            best_score = score
+                            best_params = {
+                                "n_estimators": n_estimators,
+                                "max_depth": max_depth,
+                                "learning_rate": learning_rate,
+                                "alpha": alpha,
+                                "gamma": gamma
+                            }
+                            best_model = xgb_model
+
+print(f"\nBest Params: {best_params}")
+print(f"Best Validation Custom Score: {best_score}")
+# Best Params: {'n_estimators': 100, 'max_depth': 3, 'learning_rate': 0.1, 'alpha': 0.1, 'gamma': 1}
+# Best Validation Custom Score: 0.9836375966155018
+
+#%% tuned xgboost
+
+model = xgb.XGBRegressor(n_estimators=100, max_depth=3, learning_rate=0.1, alpha=0.1, gamma=1, n_jobs=-1)
+model.fit(df_train, y_train)
+
+y_pred = model.predict(df_test)
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f"Mean Squared Error: {mse}")
+print(f"R-squared: {r2}")
+
+eval_results = evaluate_model(model, x_test_list, y_test_list)
+print(eval_results)
+full_eval_results = evaluate_model_by_names(model, x_test_list, y_test_list)
+print_eval_results(full_eval_results)
+
+name = "AAPL"
+plot_all_prediction(name, model, x_test_list, y_test_list)
+plot_prediction_by_names(model, x_test_list, y_test_list)
+
+joblib.dump(model, "models/xgboost_model.pkl")
+model = joblib.load("models/xgboost_model.pkl")
+
 #%% bagging
 
 from sklearn.ensemble import BaggingRegressor
@@ -389,6 +526,122 @@ y_pred = model.predict(df_test)
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
 
+print(f"Mean Squared Error: {mse}")
+print(f"R-squared: {r2}")
+
+eval_results = evaluate_model(model, x_test_list, y_test_list)
+print(eval_results)
+full_eval_results = evaluate_model_by_names(model, x_test_list, y_test_list)
+print_eval_results(full_eval_results)
+
+name = "AAPL"
+plot_all_prediction(name, model, x_test_list, y_test_list)
+plot_prediction_by_names(model, x_test_list, y_test_list)
+
+#%% tuning bagging
+
+def custom_score(y_true, y_pred):
+    mse = mean_squared_error(y_true, y_pred)
+    r2 = r2_score(y_true, y_pred)
+    return r2 - mse
+
+best_score = float('-inf')
+best_params = None
+best_model = None
+
+for n_estimators in [50, 100, 200]:
+    for max_samples in [0.5, 0.7, 1.0]:
+        for max_features in [0.5, 0.7, 1.0]:
+            base_model = DecisionTreeRegressor(random_state=42)
+            bagging_model = BaggingRegressor(
+                estimator=base_model,
+                n_estimators=n_estimators,
+                max_samples=max_samples,
+                max_features=max_features,
+                random_state=42,
+                n_jobs=-1
+            )
+            bagging_model.fit(df_train, y_train)
+            
+            val_preds = bagging_model.predict(df_val)
+            score = custom_score(y_val, val_preds)
+            
+            print(f"n_estimators: {n_estimators}, max_samples: {max_samples}, max_features: {max_features}, "
+                  f"Custom Score: {score}")
+            
+            if score > best_score:
+                best_score = score
+                best_params = {
+                    "n_estimators": n_estimators,
+                    "max_samples": max_samples,
+                    "max_features": max_features,
+                }
+                best_model = bagging_model
+
+print(f"\nBest Params: {best_params}")
+print(f"Best Validation Custom Score: {best_score}")
+# Best Params: {'n_estimators': 200, 'max_samples': 0.5, 'max_features': 1.0}
+# Best Validation Custom Score: 0.9883401679468514
+
+#%% tuned bagging
+
+base_model = DecisionTreeRegressor(random_state=42)
+
+model = BaggingRegressor(estimator=base_model, 
+                        n_estimators=200, max_samples=0.5, max_features=1.0,
+                        n_jobs=-1)
+model.fit(df_train, y_train)
+
+y_pred = model.predict(df_test)
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f"Mean Squared Error: {mse}")
+print(f"R-squared: {r2}")
+
+eval_results = evaluate_model(model, x_test_list, y_test_list)
+print(eval_results)
+full_eval_results = evaluate_model_by_names(model, x_test_list, y_test_list)
+print_eval_results(full_eval_results)
+
+name = "AAPL"
+plot_all_prediction(name, model, x_test_list, y_test_list)
+plot_prediction_by_names(model, x_test_list, y_test_list)
+
+joblib.dump(model, "models/bagging_model.pkl")
+model = joblib.load("models/bagging_model.pkl")
+
+#%%
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.optimizers import Adam
+
+model = Sequential([
+    Dense(64, input_dim=df_train.shape[1], activation='relu'),
+    Dropout(0.2),
+    Dense(32, activation='relu'),
+    Dense(1)                                            # Output layer for regression
+])
+
+model.compile(optimizer=Adam(learning_rate=0.01),
+              loss='mse',  # Mean Squared Error for regression
+              metrics=['mae'])  # Mean Absolute Error for tracking
+
+history = model.fit(df_train, y_train,
+                    validation_data=(df_val, y_val),
+                    epochs=5,  # Number of epochs
+                    batch_size=32,  # Batch size
+                    verbose=1)  # Verbose output
+
+test_loss, test_mae = model.evaluate(df_test, y_test)
+print(f"Test Loss (MSE): {test_loss}")
+print(f"Test MAE: {test_mae}")
+
+model.fit(df_train, y_train)
+y_pred = model.predict(df_test)
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
 print(f"Mean Squared Error: {mse}")
 print(f"R-squared: {r2}")
 
