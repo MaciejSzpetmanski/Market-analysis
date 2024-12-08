@@ -611,34 +611,53 @@ plot_prediction_by_names(model, x_test_list, y_test_list)
 joblib.dump(model, "models/bagging_model.pkl")
 model = joblib.load("models/bagging_model.pkl")
 
-#%%
+#%% NNs
 
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.optimizers.schedules import ExponentialDecay
+from tensorflow.keras.layers import BatchNormalization
 
 model = Sequential([
-    Dense(64, input_dim=df_train.shape[1], activation='relu'),
+    Dense(256, input_dim=df_train.shape[1], activation='relu'),
+    BatchNormalization(),
     Dropout(0.2),
-    Dense(32, activation='relu'),
-    Dense(1)                                            # Output layer for regression
+    Dense(128, activation='relu'),
+    BatchNormalization(),
+    Dropout(0.2),
+    Dense(1)
 ])
 
-model.compile(optimizer=Adam(learning_rate=0.01),
-              loss='mse',  # Mean Squared Error for regression
-              metrics=['mae'])  # Mean Absolute Error for tracking
+initial_learning_rate = 0.001
+decay_rate = 0.98
+decay_steps = 100
+
+lr_schedule = ExponentialDecay(
+    initial_learning_rate=initial_learning_rate,
+    decay_steps=decay_steps,
+    decay_rate=decay_rate,
+    staircase=True
+)
+
+model.compile(optimizer=Adam(learning_rate=lr_schedule),
+              loss='mse',
+              metrics=['mae'])
+
+early_stopping = EarlyStopping(monitor='val_loss', patience=np.inf, restore_best_weights=True)
 
 history = model.fit(df_train, y_train,
                     validation_data=(df_val, y_val),
-                    epochs=5,  # Number of epochs
-                    batch_size=32,  # Batch size
-                    verbose=1)  # Verbose output
+                    epochs=100,
+                    batch_size=32,
+                    callbacks=[early_stopping],
+                    verbose=1)
 
-test_loss, test_mae = model.evaluate(df_test, y_test)
-print(f"Test Loss (MSE): {test_loss}")
-print(f"Test MAE: {test_mae}")
+# test_loss, test_mae = model.evaluate(df_test, y_test)
+# print(f"Test Loss (MSE): {test_loss}")
+# print(f"Test MAE: {test_mae}")
 
-model.fit(df_train, y_train)
 y_pred = model.predict(df_test)
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
@@ -653,6 +672,17 @@ print_eval_results(full_eval_results)
 name = "AAPL"
 plot_all_prediction(name, model, x_test_list, y_test_list)
 plot_prediction_by_names(model, x_test_list, y_test_list)
+
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.legend()
+plt.show()
+
+model.save("models/nn.keras")
+
+from tensorflow.keras.models import load_model
+
+model = load_model("models/nn.keras")
 
 #%% plot results - on day forward
 
