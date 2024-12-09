@@ -35,6 +35,7 @@ def create_prediction_date_vector(date):
 
 def prepare_data_for_prediction(path, name):
     df = dp.load_data_from_file(path)
+    dp.validate_data(df)
     # TODO checking input data size
     df = dp.convert_column_types(df)
     df = dp.add_time_columns(df)

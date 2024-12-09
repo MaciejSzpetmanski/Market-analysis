@@ -53,11 +53,15 @@ def load_data(directory_name, suffix=""):
             continue
         file_path = os.path.join(directory_name, file_name)
         df_input = load_data_from_file(file_path)
+        if df_input is None:
+            continue
         # parsing filename
         file_name += "_"
         file_info = file_name.replace(".csv", "").split("_")
         # adding source information
         df_input["name"] = file_info[0]
+        if df is None and df_input is None:
+            continue
         df = pd.concat([df, df_input], ignore_index=True)
     return df
 
@@ -76,6 +80,16 @@ def remove_name_values(df, name_value):
 
 #%% validation
 
+def validate_data(df):
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError("Not a DataFrame")
+    expected_columns = {'date', 'adjusted_close', 'close', 'high', 'low', 'open', 'volume', 'name'}
+    if set(df.columns) != expected_columns:
+        raise ValueError("Wrong column names")
+    try:
+        convert_column_types(df)
+    except:
+        raise ValueError("Wrong types")
 
 #%% transformations
 
@@ -362,15 +376,13 @@ def save_data_sets(X_sets, y_sets, directory, x_name, y_name):
 def pipeline():
     print("Wczytywanie danych")
     df = load_data(DATA_DIRECTORY, FILE_SUFFIX)
+    validate_data(df)
     print("Zmiana typów kolumn")
     df = convert_column_types(df)
-    # OPTIONAL remove EURGBP=X dataset
     df = remove_name_values(df, NAME_TO_REMOVE)
     
     df = df.sort_values(by=["name", "date"])
     
-    # OPTIONAL validation
-
     print("Dodawanie kolumn czasowych")
     df = add_time_columns(df)
     print("Kodowanie nazw")

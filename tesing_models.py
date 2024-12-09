@@ -194,6 +194,16 @@ model.fit(df_train, y_train)
 
 y_pred = model.predict(df_test)
 
+a = y_test.y - df_test.close_4
+a[a > 0] = 1
+a[a <= 0] = 0
+
+b = y_pred[0] - df_test.close_4
+b[b > 0] = 1
+b[b <= 0] = 0
+
+np.sum(a-b == 0) / len(a)
+
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
 
@@ -202,6 +212,11 @@ print(f"R-squared: {r2}")
 
 # Display model coefficients
 # print("Coefficients:", model.coef_)
+
+for name, coef in zip(df_train.columns, model.coef_[0]):
+    if abs(coef) > 0.1:
+        print(f"{name}: {coef:.4f}")
+
 print("Intercept:", model.intercept_)
 
 eval_results = evaluate_model(model, x_test_list, y_test_list)
@@ -255,6 +270,16 @@ model.fit(df_train, y_train)
 
 y_pred = model.predict(df_test)
 
+a = y_test.y - df_test.close_4
+a[a > 0] = 1
+a[a <= 0] = 0
+
+b = y_pred[0] - df_test.close_4
+b[b > 0] = 1
+b[b <= 0] = 0
+
+np.sum(a-b == 0) / len(a)
+
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
 
@@ -292,6 +317,16 @@ model = RandomForestRegressor(n_estimators=100, random_state=42, max_depth=10, n
 model.fit(df_train, y_train)
 
 y_pred = model.predict(df_test)
+
+a = y_test.y - df_test.close_4
+a[a > 0] = 1
+a[a <= 0] = 0
+
+b = y_pred[0] - df_test.close_4
+b[b > 0] = 1
+b[b <= 0] = 0
+
+np.sum(a-b == 0) / len(a)
 
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
@@ -683,6 +718,18 @@ model.save("models/nn.keras")
 from tensorflow.keras.models import load_model
 
 model = load_model("models/nn.keras")
+
+y_pred = model.predict(df_test)
+
+a = y_test.y - df_test.close_4
+a[a > 0] = 1
+a[a <= 0] = 0
+
+b = y_pred[0] - df_test.close_4
+b[b > 0] = 1
+b[b <= 0] = 0
+
+np.sum(a-b == 0) / len(a)
 
 #%% plot results - on day forward
 
