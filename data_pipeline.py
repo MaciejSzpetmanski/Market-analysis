@@ -298,8 +298,9 @@ def inverse_target_scaling(data, name, scalers):
     
     data_scaled = data[data[f'name_{name}'] == 1][columns_to_standardize]
     data_original = scalers[name].inverse_transform(data_scaled)
-    close_original = data_original[:, 1]
-    return close_original
+    # close_original = data_original[:, 1]
+    # return close_original
+    return data_original
 
 def create_time_series(data, columns, group_by_column, target_column, sort_columns, n, k=1):
     """
