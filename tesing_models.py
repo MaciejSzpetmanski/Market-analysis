@@ -108,6 +108,24 @@ def merge_sets(k, x_sets_list, y_sets_list):
     y = pd.concat(y_sets_list[:k], ignore_index=True)
     return x, y
 
+#%% categorize y
+
+def categorize_y(x, y, pred_name="close"):
+    last_column_name = [col for col in x.columns if col.startswith(pred_name)][-1]
+    last_data = x[last_column_name]
+    res = y.y - last_data
+    res[res >= 0] = 1
+    res[res < 0] = 0
+    return res
+
+#%%  y to increments
+
+def y_to_increments(x, y, pred_name="close"):
+    last_column_name = [col for col in x.columns if col.startswith(pred_name)][-1]
+    last_data = x[last_column_name]
+    res =(y.y - last_data) / last_data
+    return res
+
 #%% preparing trimmed data
 
 k = 1
@@ -119,6 +137,64 @@ k = 1
 df_train, y_train = merge_sets(k, x_train_list, y_train_list)
 df_val, y_val = merge_sets(k, x_val_list, y_val_list)
 df_test, y_test = merge_sets(k, x_test_list, y_test_list)
+
+y_cat_train = categorize_y(df_train, y_train)
+y_cat_val = categorize_y(df_val, y_val)
+y_cat_test = categorize_y(df_test, y_test)
+
+y_inc_train = y_to_increments(df_train, y_train)
+y_inc_val = y_to_increments(df_val, y_val)
+y_inc_test = y_to_increments(df_test, y_test)
+
+#%% increment sets
+
+y_train_list = [y_to_increments(x, y) for x, y in zip(x_train_list, y_train_list)]
+y_val_list = [y_to_increments(x, y) for x, y in zip(x_val_list, y_val_list)]
+y_test_list = [y_to_increments(x, y) for x, y in zip(x_test_list, y_test_list)]
+
+#%% predictability of features
+
+from sklearn.tree import DecisionTreeClassifier
+
+def count_gini_reduction(df, y):
+    results = {}
+    for col in df.columns:
+        tree = DecisionTreeClassifier(criterion='gini', max_depth=2, random_state=42)
+        tree.fit(df[[col]], y)
+        tree_structure = tree.tree_
+        
+        if tree_structure.node_count > 1:
+            gini_parent = tree_structure.impurity[0]
+            n_samples_parent = tree_structure.n_node_samples[0]
+            
+            gini_left = tree_structure.impurity[1]
+            n_samples_left = tree_structure.n_node_samples[1]
+
+            gini_right = tree_structure.impurity[2]
+            n_samples_right = tree_structure.n_node_samples[2]
+
+            weighted_gini_children = (
+                (n_samples_left / n_samples_parent) * gini_left +
+                (n_samples_right / n_samples_parent) * gini_right
+            )
+            gini_reduction = gini_parent - weighted_gini_children
+        else:
+            gini_reduction = 0.0
+        
+        results[col] = gini_reduction
+    
+    results_df = pd.DataFrame(list(results.items()), columns=['feature', 'gini_reduction'])
+    results_df = results_df.sort_values(by='gini_reduction', ascending=False).reset_index(drop=True)
+    
+    return results_df
+        
+reduction = count_gini_reduction(df_train, y_cat_train)
+print(reduction)
+# volume        0.497290
+# short_formation_bullish_spike_4    2.213136e-02
+
+# reduction.head(20)
+# reduction[::-1].head(20)
 
 #%% evaluate models on all the sets
 
@@ -165,9 +241,9 @@ def plot_prediction(name, model, x, y):
     plt.figure(figsize=(10, 6))
     plt.scatter(name_index, y_name, alpha=0.7, label='original', color='blue')
     plt.scatter(name_index, pred_name, label='pred', alpha=0.7, color='orange')
-    plt.title(f'Scatter Plot of {name}', fontsize=16)
-    plt.xlabel('', fontsize=12)
-    plt.ylabel('', fontsize=12)
+    plt.title(f'{name} close price prediction', fontsize=16)
+    plt.xlabel('index', fontsize=12)
+    plt.ylabel('close price', fontsize=12)
     plt.legend()
     plt.grid(True)
     plt.show()
@@ -190,21 +266,11 @@ from sklearn.linear_model import LinearRegression
 
 model = LinearRegression()
 
-model.fit(df_train, y_train)
+model.fit(df_train, y_inc_train)
 
 y_pred = model.predict(df_test)
 
-a = y_test.y - df_test.close_4
-a[a > 0] = 1
-a[a <= 0] = 0
-
-b = y_pred[0] - df_test.close_4
-b[b > 0] = 1
-b[b <= 0] = 0
-
-np.sum(a-b == 0) / len(a)
-
-mse = mean_squared_error(y_test, y_pred)
+mse = mean_squared_error(y_inc_test, y_pred)
 r2 = r2_score(y_test, y_pred)
 
 print(f"Mean Squared Error: {mse}")
@@ -230,6 +296,8 @@ plot_prediction_by_names(model, x_test_list, y_test_list)
 
 #%% parameters for ElasticNet
 
+# y sey to inc
+
 from sklearn.linear_model import ElasticNet
 
 # alphas = [0.01, 0.1, 1, 10]
@@ -245,9 +313,9 @@ best_model = None
 for alpha in alphas:
     for l1_ratio in l1_ratios:
         model = ElasticNet(alpha=alpha, l1_ratio=l1_ratio, random_state=42)
-        model.fit(df_train, y_train)
+        model.fit(df_train, y_inc_train)
         y_val_pred = model.predict(df_val)
-        val_mse = mean_squared_error(y_val, y_val_pred)
+        val_mse = mean_squared_error(y_inc_val, y_val_pred)
         print(f"Alpha: {alpha}, L1 Ratio: {l1_ratio}, Validation MSE: {val_mse}")
         eval_results = evaluate_model(model, x_val_list, y_val_list)
         print(eval_results)
@@ -262,6 +330,9 @@ print("Best Validation MSE:", best_val_mse)
 
 # Best Parameters: {'alpha': 0.01, 'l1_ratio': 0.8}
 # Best Parameters: {'alpha': 0.003, 'l1_ratio': 0.8}
+
+# inc
+# Best Parameters: {'alpha': 0.02, 'l1_ratio': 0.9}
 
 #%% tuned ElasticNet
 
@@ -296,6 +367,7 @@ print_eval_results(full_eval_results)
 
 name = "AAPL"
 plot_all_prediction(name, model, x_test_list, y_test_list)
+
 plot_prediction_by_names(model, x_test_list, y_test_list)
 
 non_zero_features = df_train.columns[model.coef_ != 0]
