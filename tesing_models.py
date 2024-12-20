@@ -61,30 +61,30 @@ y_test_list = [y_test_1, y_test_2, y_test_3, y_test_4, y_test_5]
 
 #%% train
 
-df_train = df_train_1
-y_train = y_train_1
+# df_train = df_train_1
+# y_train = y_train_1
 
-for col in df_train.columns:
-    if (df_train[col] == y_train.y).all():
-        print("yes")
+# for col in df_train.columns:
+#     if (df_train[col] == y_train.y).all():
+#         print("yes")
         
 #%% val
 
-df_val = df_val_1
-y_val = y_val_1
+# df_val = df_val_1
+# y_val = y_val_1
 
-for col in df_val.columns:
-    if (df_val[col] == y_val.y).all():
-        print("yes")
+# for col in df_val.columns:
+#     if (df_val[col] == y_val.y).all():
+#         print("yes")
         
 #%% test
 
-df_test = df_test_1
-y_test = y_test_1
+# df_test = df_test_1
+# y_test = y_test_1
 
-for col in df_test.columns:
-    if (df_test[col] == y_test.y).all():
-        print("yes")
+# for col in df_test.columns:
+#     if (df_test[col] == y_test.y).all():
+#         print("yes")
 
 #%% getting full data - later
 
@@ -113,7 +113,7 @@ def merge_sets(k, x_sets_list, y_sets_list):
 def categorize_y(x, y, pred_name="close"):
     last_column_name = [col for col in x.columns if col.startswith(pred_name)][-1]
     last_data = x[last_column_name]
-    res = y.y - last_data
+    res = y - last_data
     res[res >= 0] = 1
     res[res < 0] = 0
     return res
@@ -123,7 +123,7 @@ def categorize_y(x, y, pred_name="close"):
 def y_to_increments(x, y, pred_name="close"):
     last_column_name = [col for col in x.columns if col.startswith(pred_name)][-1]
     last_data = x[last_column_name]
-    res =(y.y - last_data) / last_data
+    res = (y - last_data) / last_data
     return res
 
 #%% preparing trimmed data
@@ -138,19 +138,23 @@ df_train, y_train = merge_sets(k, x_train_list, y_train_list)
 df_val, y_val = merge_sets(k, x_val_list, y_val_list)
 df_test, y_test = merge_sets(k, x_test_list, y_test_list)
 
-y_cat_train = categorize_y(df_train, y_train)
-y_cat_val = categorize_y(df_val, y_val)
-y_cat_test = categorize_y(df_test, y_test)
+y_cat_train = categorize_y(df_train, y_train.y)
+y_cat_val = categorize_y(df_val, y_val.y)
+y_cat_test = categorize_y(df_test, y_test.y)
 
-y_inc_train = y_to_increments(df_train, y_train)
-y_inc_val = y_to_increments(df_val, y_val)
-y_inc_test = y_to_increments(df_test, y_test)
+y_inc_train = y_to_increments(df_train, y_train.y)
+y_inc_val = y_to_increments(df_val, y_val.y)
+y_inc_test = y_to_increments(df_test, y_test.y)
 
 #%% increment sets
 
-y_train_list = [y_to_increments(x, y) for x, y in zip(x_train_list, y_train_list)]
-y_val_list = [y_to_increments(x, y) for x, y in zip(x_val_list, y_val_list)]
-y_test_list = [y_to_increments(x, y) for x, y in zip(x_test_list, y_test_list)]
+y_train_inc_list = [y_to_increments(x, y.y) for x, y in zip(x_train_list, y_train_list)]
+y_val_inc_list = [y_to_increments(x, y.y) for x, y in zip(x_val_list, y_val_list)]
+y_test_inc_list = [y_to_increments(x, y.y) for x, y in zip(x_test_list, y_test_list)]
+
+y_train_cat_list = [categorize_y(x, y.y) for x, y in zip(x_train_list, y_train_list)]
+y_val_cat_list = [categorize_y(x, y.y) for x, y in zip(x_val_list, y_val_list)]
+y_test_cat_list = [categorize_y(x, y.y) for x, y in zip(x_test_list, y_test_list)]
 
 #%% predictability of features
 
@@ -228,6 +232,38 @@ def print_eval_results(eval_results):
         print(key)
         print(value)
         print()
+        
+def evaluate_model_on_inc(model, x, y):
+    y_pred = model.predict(x)
+    results = {}
+    name_columns = [col for col in x.columns if col.startswith("name")]
+    for col in name_columns:
+        name = col.lstrip("name_")
+        name_index = x[x[f"name_{name}"] == 1].index
+        
+        y_inc = y_to_increments(x, y.y)[name_index]
+        pred_inc = y_to_increments(x, y_pred.reshape(-1,))[name_index]
+        
+        mse = mean_squared_error(y_inc, pred_inc)
+        r2 = r2_score(y_inc, pred_inc)
+        results[name] = {"mse": mse, "r2": r2}
+    return results
+
+def evaluate_model_on_cat(model, x, y):
+    y_pred = model.predict(x)
+    results = {}
+    name_columns = [col for col in x.columns if col.startswith("name")]
+    for col in name_columns:
+        name = col.lstrip("name_")
+        name_index = x[x[f"name_{name}"] == 1].index
+        
+        y_inc = categorize_y(x, y.y)[name_index]
+        pred_inc = categorize_y(x, y_pred.reshape(-1,))[name_index]
+        
+        acc = 1 - mean_squared_error(y_inc, pred_inc)
+        r2 = r2_score(y_inc, pred_inc)
+        results[name] = {"acc": acc, "r2": r2}
+    return results
 
 #%% plot results for one name
 
@@ -259,6 +295,46 @@ def plot_prediction_by_names(model, x_test_list, y_test_list):
     for col in name_columns:
         name = col.lstrip("name_")
         plot_all_prediction(name, model, x_test_list, y_test_list)
+        
+def plot_inc(model, x, y):
+    y_pred = model.predict(x)
+    name_columns = [col for col in x.columns if col.startswith("name")]
+    for col in name_columns:
+        name = col.lstrip("name_")
+            
+        name_index = x[x[f"name_{name}"] == 1].index
+        y_inc = y_to_increments(df_test, y_test.y)[name_index]
+        pred_inc = y_to_increments(df_test, y_pred.reshape(-1,))[name_index]
+        
+        plt.figure(figsize=(10, 6))
+        plt.scatter(name_index, y_inc, alpha=0.7, label='original', color='blue')
+        plt.scatter(name_index, pred_inc, label='pred', alpha=0.7, color='orange')
+        plt.title(f'{name} close price return prediction', fontsize=16)
+        plt.xlabel('index', fontsize=12)
+        plt.ylabel('close price', fontsize=12)
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+        
+def plot_cat(model, x, y):
+    y_pred = model.predict(x)
+    name_columns = [col for col in df_test.columns if col.startswith("name")]
+    for col in name_columns:
+        name = col.lstrip("name_")
+            
+        name_index = x[x[f"name_{name}"] == 1].index
+        y_cat = categorize_y(df_test, y_test.y)[name_index]
+        pred_cat = categorize_y(df_test, y_pred.reshape(-1,))[name_index]
+        
+        plt.figure(figsize=(10, 6))
+        plt.scatter(name_index, y_cat, alpha=0.7, label='original', color='blue')
+        plt.scatter(name_index, pred_cat, label='pred', alpha=0.7, color='orange')
+        plt.title(f'{name} close price prediction', fontsize=16)
+        plt.xlabel('index', fontsize=12)
+        plt.ylabel('close price', fontsize=12)
+        plt.legend()
+        plt.grid(True)
+        plt.show()
 
 #%% linear regression
 
@@ -266,15 +342,59 @@ from sklearn.linear_model import LinearRegression
 
 model = LinearRegression()
 
-model.fit(df_train, y_inc_train)
+model.fit(df_train, y_train)
 
 y_pred = model.predict(df_test)
 
-mse = mean_squared_error(y_inc_test, y_pred)
+mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
 
 print(f"Mean Squared Error: {mse}")
 print(f"R-squared: {r2}")
+
+# cat test
+
+close_4 = df_test.close_4
+
+y_cat = y_test.y - close_4
+y_cat[y_cat >= 0] = 1
+y_cat[y_cat < 0] = 0
+
+pred_cat = y_pred.reshape(-1,) - close_4
+pred_cat[pred_cat >= 0] = 1
+pred_cat[pred_cat < 0] = 0
+
+1 - mean_squared_error(y_cat, pred_cat)
+
+### cat
+
+y_cat = categorize_y(df_test, y_test.y)
+pred_cat = categorize_y(df_test, y_pred.reshape(-1,))
+
+mse = mean_squared_error(y_cat, pred_cat)
+r2 = r2_score(y_cat, pred_cat)
+print(f"Accuracy: {1 - mse}")
+print(f"R-squared: {r2}")
+
+plot_cat(model, df_test, y_test)
+evaluate_model_on_cat(model, df_test, y_test)
+
+### inc
+
+y_inc = y_to_increments(df_test, y_test.y)
+pred_inc = y_to_increments(df_test, y_pred.reshape(-1,))
+
+mse = mean_squared_error(y_inc, pred_inc)
+r2 = r2_score(y_cat, pred_cat)
+print(f"Mean Squared Error: {mse}")
+print(f"R-squared: {r2}")
+
+# Mean Squared Error: 44.60062244791524
+
+plot_inc(model, df_test, y_test)
+evaluate_model_on_inc(model, df_test, y_test)
+
+###
 
 # Display model coefficients
 # print("Coefficients:", model.coef_)
@@ -345,7 +465,7 @@ a = y_test.y - df_test.close_4
 a[a > 0] = 1
 a[a <= 0] = 0
 
-b = y_pred[0] - df_test.close_4
+b = y_pred.reshape(-1,) - df_test.close_4
 b[b > 0] = 1
 b[b <= 0] = 0
 
@@ -356,6 +476,36 @@ r2 = r2_score(y_test, y_pred)
 
 print(f"Mean Squared Error: {mse}")
 print(f"R-squared: {r2}")
+
+### cat
+
+y_cat = categorize_y(df_test, y_test.y)
+pred_cat = categorize_y(df_test, y_pred.reshape(-1,))
+
+mse = mean_squared_error(y_cat, pred_cat)
+r2 = r2_score(y_cat, pred_cat)
+print(f"Accuracy: {1 - mse}")
+print(f"R-squared: {r2}")
+
+plot_cat(model, df_test, y_test)
+evaluate_model_on_cat(model, df_test, y_test)
+
+### inc
+
+y_inc = y_to_increments(df_test, y_test.y)
+pred_inc = y_to_increments(df_test, y_pred.reshape(-1,))
+
+mse = mean_squared_error(y_inc, pred_inc)
+r2 = r2_score(y_cat, pred_cat)
+print(f"Mean Squared Error: {mse}")
+print(f"R-squared: {r2}")
+
+# Mean Squared Error: 44.60062244791524
+
+plot_inc(model, df_test, y_test)
+evaluate_model_on_inc(model, df_test, y_test)
+
+###
 
 # print("Coefficients:", model.coef_)
 print("Intercept:", model.intercept_)
