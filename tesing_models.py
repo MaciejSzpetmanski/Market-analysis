@@ -365,6 +365,7 @@ pred_cat[pred_cat >= 0] = 1
 pred_cat[pred_cat < 0] = 0
 
 1 - mean_squared_error(y_cat, pred_cat)
+# Out[13]: 0.5051381593971227
 
 ### cat
 
@@ -373,7 +374,7 @@ pred_cat = categorize_y(df_test, y_pred.reshape(-1,))
 
 mse = mean_squared_error(y_cat, pred_cat)
 r2 = r2_score(y_cat, pred_cat)
-print(f"Accuracy: {1 - mse}")
+print(f"Accuracy: {1 - mse}") # Accuracy: 0.5051381593971227
 print(f"R-squared: {r2}")
 
 plot_cat(model, df_test, y_test)
@@ -386,7 +387,7 @@ pred_inc = y_to_increments(df_test, y_pred.reshape(-1,))
 
 mse = mean_squared_error(y_inc, pred_inc)
 r2 = r2_score(y_cat, pred_cat)
-print(f"Mean Squared Error: {mse}")
+print(f"Mean Squared Error: {mse}") # Mean Squared Error: 44.60062244791524
 print(f"R-squared: {r2}")
 
 # Mean Squared Error: 44.60062244791524
@@ -461,16 +462,6 @@ model.fit(df_train, y_train)
 
 y_pred = model.predict(df_test)
 
-a = y_test.y - df_test.close_4
-a[a > 0] = 1
-a[a <= 0] = 0
-
-b = y_pred.reshape(-1,) - df_test.close_4
-b[b > 0] = 1
-b[b <= 0] = 0
-
-np.sum(a-b == 0) / len(a)
-
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
 
@@ -484,7 +475,7 @@ pred_cat = categorize_y(df_test, y_pred.reshape(-1,))
 
 mse = mean_squared_error(y_cat, pred_cat)
 r2 = r2_score(y_cat, pred_cat)
-print(f"Accuracy: {1 - mse}")
+print(f"Accuracy: {1 - mse}") # Accuracy: 0.5428179949760219
 print(f"R-squared: {r2}")
 
 plot_cat(model, df_test, y_test)
@@ -497,7 +488,7 @@ pred_inc = y_to_increments(df_test, y_pred.reshape(-1,))
 
 mse = mean_squared_error(y_inc, pred_inc)
 r2 = r2_score(y_cat, pred_cat)
-print(f"Mean Squared Error: {mse}")
+print(f"Mean Squared Error: {mse}") # Mean Squared Error: 0.5584580601737017
 print(f"R-squared: {r2}")
 
 # Mean Squared Error: 44.60062244791524
@@ -540,16 +531,6 @@ model.fit(df_train, y_train)
 
 y_pred = model.predict(df_test)
 
-a = y_test.y - df_test.close_4
-a[a > 0] = 1
-a[a <= 0] = 0
-
-b = y_pred[0] - df_test.close_4
-b[b > 0] = 1
-b[b <= 0] = 0
-
-np.sum(a-b == 0) / len(a)
-
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
 
@@ -564,6 +545,32 @@ print_eval_results(full_eval_results)
 name = "AAPL"
 plot_all_prediction(name, model, x_test_list, y_test_list)
 plot_prediction_by_names(model, x_test_list, y_test_list)
+
+### cat
+
+y_cat = categorize_y(df_test, y_test.y)
+pred_cat = categorize_y(df_test, y_pred.reshape(-1,))
+
+mse = mean_squared_error(y_cat, pred_cat)
+r2 = r2_score(y_cat, pred_cat)
+print(f"Accuracy: {1 - mse}") # Accuracy: 0.5396209180178123
+print(f"R-squared: {r2}")
+
+plot_cat(model, df_test, y_test)
+evaluate_model_on_cat(model, df_test, y_test)
+
+### inc
+
+y_inc = y_to_increments(df_test, y_test.y)
+pred_inc = y_to_increments(df_test, y_pred.reshape(-1,))
+
+mse = mean_squared_error(y_inc, pred_inc)
+r2 = r2_score(y_cat, pred_cat)
+print(f"Mean Squared Error: {mse}") # Mean Squared Error: 0.2320631170343813
+print(f"R-squared: {r2}")
+
+plot_inc(model, df_test, y_test)
+evaluate_model_on_inc(model, df_test, y_test)
 
 #%% fine-tuning random forest
 
@@ -658,10 +665,35 @@ print(non_zero_features)
 joblib.dump(model, "models/random_forest_model.pkl")
 model = joblib.load("models/random_forest_model.pkl")
 
+### cat
+
+y_cat = categorize_y(df_test, y_test.y)
+pred_cat = categorize_y(df_test, y_pred.reshape(-1,))
+
+mse = mean_squared_error(y_cat, pred_cat)
+r2 = r2_score(y_cat, pred_cat)
+print(f"Accuracy: {1 - mse}") # Accuracy: 0.5316282256222882
+print(f"R-squared: {r2}")
+
+plot_cat(model, df_test, y_test)
+evaluate_model_on_cat(model, df_test, y_test)
+
+### inc
+
+y_inc = y_to_increments(df_test, y_test.y)
+pred_inc = y_to_increments(df_test, y_pred.reshape(-1,))
+
+mse = mean_squared_error(y_inc, pred_inc)
+r2 = r2_score(y_cat, pred_cat)
+print(f"Mean Squared Error: {mse}") # Mean Squared Error: 0.17168454180862347
+print(f"R-squared: {r2}")
+
+plot_inc(model, df_test, y_test)
+evaluate_model_on_inc(model, df_test, y_test)
+
 #%% xgboost
 
 import xgboost as xgb
-import matplotlib.pyplot as plt
 
 model = xgb.XGBRegressor(n_estimators=100, random_state=42, max_depth=5, n_jobs=-1)
 
@@ -683,6 +715,32 @@ print_eval_results(full_eval_results)
 name = "AAPL"
 plot_all_prediction(name, model, x_test_list, y_test_list)
 plot_prediction_by_names(model, x_test_list, y_test_list)
+
+### cat
+
+y_cat = categorize_y(df_test, y_test.y)
+pred_cat = categorize_y(df_test, y_pred.reshape(-1,))
+
+mse = mean_squared_error(y_cat, pred_cat)
+r2 = r2_score(y_cat, pred_cat)
+print(f"Accuracy: {1 - mse}") # 0.5218086321077872
+print(f"R-squared: {r2}")
+
+plot_cat(model, df_test, y_test)
+evaluate_model_on_cat(model, df_test, y_test)
+
+### inc
+
+y_inc = y_to_increments(df_test, y_test.y)
+pred_inc = y_to_increments(df_test, y_pred.reshape(-1,))
+
+mse = mean_squared_error(y_inc, pred_inc)
+r2 = r2_score(y_cat, pred_cat)
+print(f"Mean Squared Error: {mse}") # Mean Squared Error: 0.9611663045089675
+print(f"R-squared: {r2}")
+
+plot_inc(model, df_test, y_test)
+evaluate_model_on_inc(model, df_test, y_test)
 
 #%% trim
 
@@ -764,6 +822,32 @@ plot_prediction_by_names(model, x_test_list, y_test_list)
 joblib.dump(model, "models/xgboost_model.pkl")
 model = joblib.load("models/xgboost_model.pkl")
 
+### cat
+
+y_cat = categorize_y(df_test, y_test.y)
+pred_cat = categorize_y(df_test, y_pred.reshape(-1,))
+
+mse = mean_squared_error(y_cat, pred_cat)
+r2 = r2_score(y_cat, pred_cat)
+print(f"Accuracy: {1 - mse}") # Accuracy: 0.5355103905001142
+print(f"R-squared: {r2}")
+
+plot_cat(model, df_test, y_test)
+evaluate_model_on_cat(model, df_test, y_test)
+
+### inc
+
+y_inc = y_to_increments(df_test, y_test.y)
+pred_inc = y_to_increments(df_test, y_pred.reshape(-1,))
+
+mse = mean_squared_error(y_inc, pred_inc)
+r2 = r2_score(y_cat, pred_cat)
+print(f"Mean Squared Error: {mse}") # Mean Squared Error: 0.2646625077602493
+print(f"R-squared: {r2}")
+
+plot_inc(model, df_test, y_test)
+evaluate_model_on_inc(model, df_test, y_test)
+
 #%% bagging
 
 from sklearn.ensemble import BaggingRegressor
@@ -794,6 +878,32 @@ print_eval_results(full_eval_results)
 name = "AAPL"
 plot_all_prediction(name, model, x_test_list, y_test_list)
 plot_prediction_by_names(model, x_test_list, y_test_list)
+
+### cat
+
+y_cat = categorize_y(df_test, y_test.y)
+pred_cat = categorize_y(df_test, y_pred.reshape(-1,))
+
+mse = mean_squared_error(y_cat, pred_cat)
+r2 = r2_score(y_cat, pred_cat)
+print(f"Accuracy: {1 - mse}") # Accuracy: 0.5313998629824161
+print(f"R-squared: {r2}")
+
+plot_cat(model, df_test, y_test)
+evaluate_model_on_cat(model, df_test, y_test)
+
+### inc
+
+y_inc = y_to_increments(df_test, y_test.y)
+pred_inc = y_to_increments(df_test, y_pred.reshape(-1,))
+
+mse = mean_squared_error(y_inc, pred_inc)
+r2 = r2_score(y_cat, pred_cat)
+print(f"Mean Squared Error: {mse}") # Mean Squared Error: 0.2570289826935599
+print(f"R-squared: {r2}")
+
+plot_inc(model, df_test, y_test)
+evaluate_model_on_inc(model, df_test, y_test)
 
 #%% tuning bagging
 
@@ -867,6 +977,32 @@ plot_prediction_by_names(model, x_test_list, y_test_list)
 
 joblib.dump(model, "models/bagging_model.pkl")
 model = joblib.load("models/bagging_model.pkl")
+
+### cat
+
+y_cat = categorize_y(df_test, y_test.y)
+pred_cat = categorize_y(df_test, y_pred.reshape(-1,))
+
+mse = mean_squared_error(y_cat, pred_cat)
+r2 = r2_score(y_cat, pred_cat)
+print(f"Accuracy: {1 - mse}") # Accuracy: 0.5323133135419045
+print(f"R-squared: {r2}")
+
+plot_cat(model, df_test, y_test)
+evaluate_model_on_cat(model, df_test, y_test)
+
+### inc
+
+y_inc = y_to_increments(df_test, y_test.y)
+pred_inc = y_to_increments(df_test, y_pred.reshape(-1,))
+
+mse = mean_squared_error(y_inc, pred_inc)
+r2 = r2_score(y_cat, pred_cat)
+print(f"Mean Squared Error: {mse}") # Mean Squared Error: 0.20768790567060955
+print(f"R-squared: {r2}")
+
+plot_inc(model, df_test, y_test)
+evaluate_model_on_inc(model, df_test, y_test)
 
 #%% NNs
 
@@ -943,15 +1079,31 @@ model = load_model("models/nn.keras")
 
 y_pred = model.predict(df_test)
 
-a = y_test.y - df_test.close_4
-a[a > 0] = 1
-a[a <= 0] = 0
+### cat
 
-b = y_pred[0] - df_test.close_4
-b[b > 0] = 1
-b[b <= 0] = 0
+y_cat = categorize_y(df_test, y_test.y)
+pred_cat = categorize_y(df_test, y_pred.reshape(-1,))
 
-np.sum(a-b == 0) / len(a)
+mse = mean_squared_error(y_cat, pred_cat)
+r2 = r2_score(y_cat, pred_cat)
+print(f"Accuracy: {1 - mse}") # Accuracy: 0.488239324046586
+print(f"R-squared: {r2}")
+
+plot_cat(model, df_test, y_test)
+evaluate_model_on_cat(model, df_test, y_test)
+
+### inc
+
+y_inc = y_to_increments(df_test, y_test.y)
+pred_inc = y_to_increments(df_test, y_pred.reshape(-1,))
+
+mse = mean_squared_error(y_inc, pred_inc)
+r2 = r2_score(y_cat, pred_cat)
+print(f"Mean Squared Error: {mse}") # Mean Squared Error: 12.691536323513928
+print(f"R-squared: {r2}")
+
+plot_inc(model, df_test, y_test)
+evaluate_model_on_inc(model, df_test, y_test)
 
 #%% plot results - on day forward
 
