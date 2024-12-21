@@ -326,7 +326,7 @@ plot_cat(model, df_test, y_test)
 count_acc(model, df_test, y_test)
 # Out[148]: 0.4818451701301667
 
-#%% xgboost tunung
+#%% xgboost tuning
 
 best_score = float('inf')
 best_params = None
