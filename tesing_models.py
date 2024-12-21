@@ -747,7 +747,7 @@ evaluate_model_on_inc(model, df_test, y_test)
 xgb.plot_importance(model)
 plt.show()
 
-#%% xgboost tunung
+#%% xgboost tuning
 
 from sklearn.model_selection import GridSearchCV
 
@@ -985,7 +985,7 @@ pred_cat = categorize_y(df_test, y_pred.reshape(-1,))
 
 mse = mean_squared_error(y_cat, pred_cat)
 r2 = r2_score(y_cat, pred_cat)
-print(f"Accuracy: {1 - mse}") # Accuracy: 0.5323133135419045
+print(f"Accuracy: {1 - mse}") # Accuracy: 0.5295729618634392
 print(f"R-squared: {r2}")
 
 plot_cat(model, df_test, y_test)

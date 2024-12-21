@@ -158,14 +158,11 @@ def plot_cat(model, x, y):
 from sklearn.linear_model import LinearRegression
 
 model = LinearRegression()
-
 model.fit(df_train, y_train)
-
 y_pred = model.predict(df_test)
 
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
-
 print(f"Mean Squared Error: {mse}") # Mean Squared Error: 312.52001781262425
 print(f"R-squared: {r2}")
 
@@ -218,7 +215,6 @@ print("Best Validation MSE:", best_val_mse)
 
 model = ElasticNet(alpha=12, l1_ratio=0.9, random_state=42)
 model.fit(df_train, y_train)
-
 y_pred = model.predict(df_test)
 
 mse = mean_squared_error(y_test, y_pred)
@@ -240,9 +236,7 @@ count_acc(model, df_test, y_test)
 from sklearn.ensemble import RandomForestRegressor
 
 model = RandomForestRegressor(n_estimators=100, random_state=42, max_depth=10, n_jobs=-1)
-
 model.fit(df_train, y_train)
-
 y_pred = model.predict(df_test)
 
 mse = mean_squared_error(y_test, y_pred)
@@ -418,6 +412,78 @@ plot_cat(model, df_test, y_test)
 
 count_acc(model, df_test, y_test)
 # Out[180]: 0.48161680749029456
+
+#%% tuning bagging
+
+best_score = float('inf')
+best_params = None
+best_model = None
+
+for n_estimators in [50, 100, 200]:
+    for max_samples in [0.5, 0.7, 1.0]:
+        for max_features in [0.5, 0.7, 1.0]:
+            base_model = DecisionTreeRegressor(random_state=42)
+            bagging_model = BaggingRegressor(
+                estimator=base_model,
+                n_estimators=n_estimators,
+                max_samples=max_samples,
+                max_features=max_features,
+                random_state=42,
+                n_jobs=-1
+            )
+            bagging_model.fit(df_train, y_train)
+            
+            val_preds = bagging_model.predict(df_val)
+            score = mean_squared_error(y_val, val_preds)
+            
+            print(f"n_estimators: {n_estimators}, max_samples: {max_samples}, max_features: {max_features}, "
+                  f"MSE: {score}")
+            
+            if score < best_score:
+                best_score = score
+                best_params = {
+                    "n_estimators": n_estimators,
+                    "max_samples": max_samples,
+                    "max_features": max_features,
+                }
+                best_model = bagging_model
+
+print(f"\nBest Params: {best_params}")
+print(f"Best Validation MSE: {best_score}")
+# Best Params: {'n_estimators': 200, 'max_samples': 0.5, 'max_features': 0.5}
+# Best Validation MSE: 102.87165231946987
+
+#%% tuned bagging
+
+from sklearn.ensemble import BaggingRegressor
+from sklearn.tree import DecisionTreeRegressor
+
+base_model = DecisionTreeRegressor(random_state=42)
+bagging_model = BaggingRegressor(
+    estimator=base_model,
+    n_estimators=200,
+    max_samples=0.5,
+    max_features=0.5,
+    random_state=42,
+    n_jobs=-1
+)
+
+model.fit(df_train, y_train)
+y_pred = model.predict(df_test)
+
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+print(f"Mean Squared Error: {mse}") # Mean Squared Error: 37.04021986350858
+print(f"R-squared: {r2}")
+
+evaluate_model_on_inc(model, df_test, y_test)
+plot_inc(model, df_test, y_test)
+
+evaluate_model_on_cat(model, df_test, y_test)
+plot_cat(model, df_test, y_test)
+
+count_acc(model, df_test, y_test)
+# Out[50]: 0.48161680749029456
 
 #%% NNs
 
