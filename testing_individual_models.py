@@ -171,7 +171,6 @@ def tune_xgboost(df_train, y_train, df_val, y_val, n_estimators_list, max_depths
                             mse = mean_squared_error(y_val, val_preds)
                             print(f"n_estimators: {n_estimators}, max_depth: {max_depth}, learning_rate: {learning_rate}, "
                                   f"alpha: {alpha}, gamma: {gamma}, MSE: {mse}\n")
-                            print()                        
                             if mse < best_mse:
                                 best_mse = mse
                                 best_params = {
@@ -261,7 +260,16 @@ for col in name_columns:
     models[name] = model
     history[name] = {"mse": mse, "params": params}
     
-mean_mse = np.mean([value["mse"] for key, value in history.items()])    
+for name in names:
+    joblib.dump(models[name], f"models/individual/{name}.pkl")
+    # model = joblib.load("models/individual/name.pkl")
+    
+#%%
+
+mean_mse = np.mean([value["mse"] for key, value in history.items()])
+
+[value["mse"] for key, value in zip(history.items())]
+[value["mse"] / np.std(y_val) for value, y_val in zip(history.values(), data_y_val.values())]
 
 cum_acc = 0
 for name in names:
@@ -274,8 +282,6 @@ print(cum_acc)
         
 plot_prediction(models, data_x_train, data_y_train, names)
 
-for name in names:
-    joblib.dump(models[name], "models/individual/name.pkl")
-    # model = joblib.load("models/individual/name.pkl")
+
 
 
