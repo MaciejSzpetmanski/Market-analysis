@@ -19,7 +19,7 @@ NAME_TO_REMOVE = "EURGBP=X"
 GROUP_BY_COLUMN = "name"
 LONG_SCHEMA_PATH = "indicators/Schemat zmienna długość"
 LONG_SCHEMA_PREFIX = "long_formation_"
-SCHEMA_WIDTH = 5 #3 #10 #5 #20
+SCHEMA_WIDTH = 30 #5 #3 #10 #20
 EMA_PERIODS = [10, 20, 50, 100, 200]
 SHORT_SCHEMA_PATH = "indicators/Schemat stała długość"
 SHORT_SCHEMA_PREFIX = "short_formation_"
@@ -28,7 +28,7 @@ COLUMNS_TO_STANDARDIZE = ["adjusted_close", "close", "high", "low", "open", "vol
 SCALERS_PATH = "scalers/scalers.pkl"
 TARGET_COLUMN = "close"
 SORT_COLUMNS = ["date_year", "date_month", "date_day_of_month"]
-TIME_SERIES_LENGTH = 5 #3 #10 #5 #20
+TIME_SERIES_LENGTH = 30 #5 #3 #10 #20
 MAX_TARGET_HORIZON = 5
 DATA_OUTPUT_DIRECTORY = "datasets"
 X_TRAIN_OUTPUT_NAME = "df_train"

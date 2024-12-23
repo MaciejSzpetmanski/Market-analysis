@@ -359,6 +359,10 @@ for name in names:
     
 #%% results
 
+models = {}
+for name in names:
+    models[name] = joblib.load(f"models/ensemble/{name}.pkl")
+
 for name in names:
     print(name)
     mse_base = mean_squared_error(base_models[name].predict(data_x_test[name]), data_y_test[name])
@@ -372,6 +376,12 @@ for name in names:
     acc = count_acc(models[name], pred_x_test, data_y_test_trim[name])
     print(f"Acc on base model: {acc_base}")
     print(f"Acc on final model: {acc}\n")
+    
+for name in names:
+    print(name)
+    acc_base = count_acc(base_models[name], data_x_test[name], data_y_test[name])
+    acc = count_acc(models[name], pred_x_test, data_y_test_trim[name])
+    print(f"Best acc: {max(acc_base, acc)}")
         
 plot_prediction_ensemble(models, pred_x_test, data_y_test_trim, names)
 

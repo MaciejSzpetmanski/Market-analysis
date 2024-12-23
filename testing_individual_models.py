@@ -262,13 +262,16 @@ for col in name_columns:
     
 for name in names:
     joblib.dump(models[name], f"models/individual/{name}.pkl")
-    # model = joblib.load("models/individual/name.pkl")
     
 #%%
 
+models = {}
+for name in names:
+    models[name] = joblib.load(f"models/individual/{name}.pkl")
+
 mean_mse = np.mean([value["mse"] for key, value in history.items()])
 
-[value["mse"] for key, value in zip(history.items())]
+# [value["mse"] for key, value in zip(history.items())]
 [value["mse"] / np.std(y_val) for value, y_val in zip(history.values(), data_y_val.values())]
 
 cum_acc = 0
