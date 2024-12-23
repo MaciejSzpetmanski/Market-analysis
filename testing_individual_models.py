@@ -271,7 +271,6 @@ for name in names:
 
 mean_mse = np.mean([value["mse"] for key, value in history.items()])
 
-# [value["mse"] for key, value in zip(history.items())]
 [value["mse"] / np.std(y_val) for value, y_val in zip(history.values(), data_y_val.values())]
 
 cum_acc = 0
@@ -283,7 +282,7 @@ for name in names:
 cum_acc /= len(names)
 print(cum_acc)
         
-plot_prediction(models, data_x_train, data_y_train, names)
+plot_prediction(models, data_x_test, data_y_test, names)
 
 
 
