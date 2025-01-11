@@ -35,23 +35,23 @@ def create_prediction_date_vector(date):
 
 def prepare_data_for_prediction(path, name):
     df = dp.load_data_from_file(path)
+    # artificially add name column for grouping
+    df["name"] = name
     dp.validate_data(df)
-    # TODO checking input data size
-    df = dp.convert_column_types(df)
-    df = dp.add_time_columns(df)
     
-    df = df.sort_values(by=["date"])
-    
-    # TODO trimming, filtering data
-    df = df.tail(dp.TIME_SERIES_LENGTH + dp.SCHEMA_WIDTH - 1).reset_index(drop=True)
-    
+    # adding name columns
     columns = dp.load_object(dp.TRAIN_COLUMNS_PATH)
     name_columns = [col for col in columns if col.startswith("name_")]
     for col in name_columns:
         df[col] = 0
     df[f"name_{name}"] = 1
-    # artificially add name column for grouping
-    df["name"] = name
+    
+    df = dp.convert_column_types(df)
+    df = dp.add_time_columns(df)
+    
+    df = df.sort_values(by=["date"])
+    
+    df = df.tail(dp.TIME_SERIES_LENGTH + dp.SCHEMA_WIDTH - 1).reset_index(drop=True)
     
     print("Standaryzacja kolumn")
     scalers = dp.load_object(dp.SCALERS_PATH)

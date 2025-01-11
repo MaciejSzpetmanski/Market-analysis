@@ -376,13 +376,20 @@ for name in names:
     acc = count_acc(models[name], pred_x_test, data_y_test_trim[name])
     print(f"Acc on base model: {acc_base}")
     print(f"Acc on final model: {acc}\n")
-    
+
+counter = 0
+cum_acc = 0
 for name in names:
     print(name)
     acc_base = count_acc(base_models[name], data_x_test[name], data_y_test[name])
     acc = count_acc(models[name], pred_x_test, data_y_test_trim[name])
     print(f"Best acc: {max(acc_base, acc)}")
-        
+    counter += 1
+    cum_acc += max(acc_base, acc)
+    
+print(cum_acc / counter)
+    
+
 plot_prediction_ensemble(models, pred_x_test, data_y_test_trim, names)
 
 
