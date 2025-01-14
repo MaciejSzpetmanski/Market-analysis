@@ -1,5 +1,19 @@
 import pandas as pd
 import data_pipeline as dp
+import yfinance as yf
+from datetime import datetime, timedelta
+import joblib
+
+#%% fetch data
+
+def fetch_data(name, n_days):
+    extended_days = n_days * 2
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=extended_days)
+    data = yf.download(name, start=start_date, end=end_date, interval='1d')
+    data = data.tail(n_days)
+    # TODO raise an error when there is not enough data
+    return data
 
 #%%
 
@@ -33,8 +47,7 @@ def create_prediction_date_vector(date):
 
 #%%
 
-def prepare_data_for_prediction(path, name):
-    df = dp.load_data_from_file(path)
+def prepare_data_for_prediction(df, name):
     # artificially add name column for grouping
     df["name"] = name
     dp.validate_data(df)
@@ -88,14 +101,61 @@ def merge_vector_with_pred_date(x_vector, date):
     y_date = create_prediction_date_vector(date)
     result = pd.concat([x_vector, y_date], axis=1)
     return result
+
+def download_and_prepare_data(name):
+    n_days = dp.TIME_SERIES_LENGTH + dp.SCHEMA_WIDTH - 1
+    df = fetch_data(name, n_days)
+    df = df.reset_index(drop=False)
+    df.columns = [c[0] for c in df.columns]
+    df.columns = df.columns.str.lower()
+    # TODO change to actual value
+    df["adjusted_close"] = df["close"]
+    df = prepare_data_for_prediction(df, name)
+    
+    date = datetime.today().strftime('%Y-%m-%d')
+    df = merge_vector_with_pred_date(df, date)
+    return df
+
+def predict_value(df, name, pred_name="close"):
+    """
+    Oczekuje ramki danych w formacie odpowiednim dla modelu.
+    Wylicza przewidywany przyrost na podstawie modelu.
+    Następnie przekształca tę wartosć, uzyskując przewidywaną cenę.
+    Na koniec przeskalowuję ją do oryginalnej skali i zwraca.
+    """
+    
+    # TODO replace with final model function
+    # loading model
+    model = joblib.load(f"models/individual/{name}.pkl")
+    # predicting increment
+    inc_prediction = model.predict(df)
+    
+    # getting the last known value
+    
+    last_column_name = [col for col in df.columns if col.startswith(pred_name)][-1]
+    last_data = df[last_column_name]
+    
+    # counting new value
+    prediction = last_data * inc_prediction + last_data
+    
+    # rescaling the value
+    scalers = dp.load_object(dp.SCALERS_PATH)
+    
+    # preparing a df for inversion
+    pred_data = {f"name_{name}": 1, "adjusted_close": 0, "close": prediction, "high": 0, "low": 0, "open": 0, "volume": 0}
+    pred_df = pd.DataFrame(pred_data)
+    
+    original_scale_values = dp.inverse_target_scaling(pred_df, name, scalers)
+    y_pred = original_scale_values[:, 1]
+    return y_pred
     
 def main():
     path = "data/^DJI_data_1d.csv" # example
     name = "^DJI" # example
     date = "2024-09-30" # example
-    x = prepare_data_for_prediction(path, name)
+    df = dp.load_data_from_file(path)
+    x = prepare_data_for_prediction(df, name)
     x = merge_vector_with_pred_date(x, date)
     
 if __name__ == "__main__":
     main()
-    

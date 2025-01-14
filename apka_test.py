@@ -173,6 +173,7 @@ class StockPredictionApp(tk.Tk):
             return
 
         try:
+            # TODO use prediction pipeline
             data_pipeline.main()
         except Exception as e:
             messagebox.showerror("Błąd", f"Pipeline nie powiódł się:\n{e}")
@@ -254,6 +255,7 @@ class StockPredictionApp(tk.Tk):
             )
 
     def mock_predict(self):
+        # TODO attach model
         return random.uniform(100, 300)
 
 
