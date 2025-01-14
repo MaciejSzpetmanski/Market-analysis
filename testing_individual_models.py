@@ -4,7 +4,7 @@ import os
 import joblib
 
 path = "D:\Studia\semestr7\inźynierka\Market-analysis"
-# path = "C:\Studia\Market-analysis"
+path = "C:\Studia\Market-analysis"
 os.chdir(path)
 
 #%% categorize y
@@ -264,6 +264,9 @@ for name in names:
     joblib.dump(models[name], f"models/individual/{name}.pkl")
     
 #%%
+
+name_columns = [col for col in df_train.columns if col.startswith("name")]
+names = [col.lstrip("name_") for col in name_columns]
 
 models = {}
 for name in names:

@@ -4,7 +4,7 @@ import os
 import joblib
 
 path = "D:\Studia\semestr7\inźynierka\Market-analysis"
-# path = "C:\Studia\Market-analysis"
+path = "C:\Studia\Market-analysis"
 os.chdir(path)
 
 #%% categorize y
@@ -363,19 +363,37 @@ models = {}
 for name in names:
     models[name] = joblib.load(f"models/ensemble/{name}.pkl")
 
+counter = 0
+cum_mse_base = 0
+cum_mse = 0
 for name in names:
     print(name)
     mse_base = mean_squared_error(base_models[name].predict(data_x_test[name]), data_y_test[name])
     mse = mean_squared_error(models[name].predict(pred_x_test), data_y_test_trim[name])
     print(f"MSE on base model: {mse_base}")
     print(f"MSE on final model: {mse}\n")
+    counter += 1
+    cum_mse_base += mse_base
+    cum_mse += mse
+print(f"Total MSE on base model: {cum_mse_base / counter}")
+print(f"Total MSE on final model: {cum_mse / counter}\n")
+
     
+counter = 0
+cum_acc_base = 0
+cum_acc = 0
 for name in names:
     print(name)
     acc_base = count_acc(base_models[name], data_x_test[name], data_y_test[name])
     acc = count_acc(models[name], pred_x_test, data_y_test_trim[name])
     print(f"Acc on base model: {acc_base}")
     print(f"Acc on final model: {acc}\n")
+    counter += 1
+    cum_acc_base += acc_base
+    cum_acc += acc
+print(f"Total Acc on base model: {cum_acc_base / counter}")
+print(f"Total Acc on final model: {cum_acc / counter}\n")
+    
 
 counter = 0
 cum_acc = 0
@@ -386,8 +404,20 @@ for name in names:
     print(f"Best acc: {max(acc_base, acc)}")
     counter += 1
     cum_acc += max(acc_base, acc)
-    
 print(cum_acc / counter)
+
+
+for name in names:
+    print(name)
+    mse_base = mean_squared_error(base_models[name].predict(data_x_test[name]), data_y_test[name])
+    mse = mean_squared_error(models[name].predict(pred_x_test), data_y_test_trim[name])
+    acc_base = count_acc(base_models[name], data_x_test[name], data_y_test[name])
+    acc = count_acc(models[name], pred_x_test, data_y_test_trim[name])
+    print(f"MSE on base model: {mse_base}")
+    print(f"MSE on final model: {mse}\n")
+    print(f"Acc on base model: {acc_base}")
+    print(f"Acc on final model: {acc}\n")
+    print()
     
 
 plot_prediction_ensemble(models, pred_x_test, data_y_test_trim, names)
