@@ -64,6 +64,8 @@ def prepare_data_for_prediction(df, name):
     
     df = df.sort_values(by=["date"])
     
+    if len(df) < dp.TIME_SERIES_LENGTH:
+        raise Exception("Not enough data")
     df = df.tail(dp.TIME_SERIES_LENGTH + dp.SCHEMA_WIDTH - 1).reset_index(drop=True)
     
     print("Standaryzacja kolumn")

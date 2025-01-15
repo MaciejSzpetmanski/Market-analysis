@@ -12,8 +12,9 @@ import pandas as pd
 import random
 import yfinance as yf
 
-import csv_data_converter
-import data_pipeline
+import data_pipeline as dp
+import prediction_pipeline as pp
+from datetime import datetime, timedelta
 
 
 class StockPredictionApp(tk.Tk):
@@ -24,6 +25,9 @@ class StockPredictionApp(tk.Tk):
         self.geometry("1000x600")
 
         self.last_close_value = None
+        self.df = None
+        self.pred_date = None
+        self.freshLoaded = False
 
         # -------- Główne ramki (layout) -----------
         main_frame = ttk.Frame(self)
@@ -44,12 +48,13 @@ class StockPredictionApp(tk.Tk):
         # -------- Zmienne kontrolne -----------
         self.data_source = tk.StringVar(value="local")  # 'local' lub 'internet'
 
-        self.instruments_list = ["AAPL", "TSLA", "AMZN", "BTC-USD", "ETH-USD"]
+        # self.instruments_list = ["AAPL", "TSLA", "AMZN", "BTC-USD", "ETH-USD"]
+        self.instruments_list = dp.load_object("names/names.pkl")
         self.instrument_var = tk.StringVar(value="AAPL")
         self.from_date_var = tk.StringVar(value="2023-01-01")
         self.to_date_var = tk.StringVar(value="2023-12-31")
         self.interval_var = tk.StringVar(value="1d")
-
+        
         self.file_path_var = tk.StringVar()
 
         # -------- Elementy GUI -----------
@@ -159,6 +164,8 @@ class StockPredictionApp(tk.Tk):
             self.load_local_data()
         else:
             self.load_internet_data()
+        print(self.df)
+        self.freshLoaded = True
 
     def load_local_data(self):
         path = self.file_path_var.get()
@@ -166,22 +173,22 @@ class StockPredictionApp(tk.Tk):
             messagebox.showerror("Błąd", "Nie wybrano pliku CSV.")
             return
 
-        try:
-            csv_data_converter.main()
-        except Exception as e:
-            messagebox.showerror("Błąd", f"Konwersja CSV nie powiodła się:\n{e}")
-            return
+        # try:
+        #     csv_data_converter.main()
+        # except Exception as e:
+        #     messagebox.showerror("Błąd", f"Konwersja CSV nie powiodła się:\n{e}")
+        #     return
+
+        # try:
+        #     # TODO use prediction pipeline
+        #     data_pipeline.main()
+        # except Exception as e:
+        #     messagebox.showerror("Błąd", f"Pipeline nie powiódł się:\n{e}")
+        #     return
 
         try:
-            # TODO use prediction pipeline
-            data_pipeline.main()
-        except Exception as e:
-            messagebox.showerror("Błąd", f"Pipeline nie powiódł się:\n{e}")
-            return
-
-        try:
-            df = pd.read_csv(path)
-            self.update_chart(df)
+            self.df = pd.read_csv(path)
+            self.update_chart(self.df)
         except Exception as e:
             messagebox.showerror("Błąd", f"Nie udało się wczytać finalnego CSV:\n{e}")
 
@@ -196,16 +203,19 @@ class StockPredictionApp(tk.Tk):
             return
 
         try:
-            df = yf.download(tickers=instrument, start=from_date, end=to_date, interval=interval)
-            df.reset_index(inplace=True)
+            self.df = yf.download(tickers=instrument, start=from_date, end=to_date, interval=interval)
+            self.df.reset_index(inplace=True)
+            self.df.columns = [c[0] for c in self.df.columns]
+            self.df.columns = self.df.columns.str.lower()
+            self.df["adjusted_close"] = self.df["close"]
 
-            if 'Datetime' in df.columns:
-                df.rename(columns={'Datetime': 'Date'}, inplace=True)
+            if 'datetime' in self.df.columns:
+                self.df.rename(columns={'Datetime': 'date'}, inplace=True)
         except Exception as e:
             messagebox.showerror("Błąd", f"Nie udało się pobrać danych z yfinance:\n{e}")
             return
 
-        self.update_chart(df)
+        self.update_chart(self.df)
 
     def update_chart(self, df):
         self.axes.clear()
@@ -213,24 +223,26 @@ class StockPredictionApp(tk.Tk):
         self.last_close_value = None
 
         if df is not None and not df.empty:
-            if "Date" not in df.columns:
-                messagebox.showerror("Błąd", "Brak kolumny 'Date' w danych.")
+            if "date" not in df.columns:
+                messagebox.showerror("Błąd", "Brak kolumny 'date' w danych.")
                 return
-            if "Close" not in df.columns:
-                messagebox.showerror("Błąd", "Brak kolumny 'Close' w danych.")
+            if "close" not in df.columns:
+                messagebox.showerror("Błąd", "Brak kolumny 'close' w danych.")
                 return
 
-            df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-            df.dropna(subset=["Date"], inplace=True)
-            df.sort_values(by="Date", inplace=True)
+            df['date'] = pd.to_datetime(df['date'], errors='coerce')
+            df.dropna(subset=["date"], inplace=True)
+            df.sort_values(by="date", inplace=True)
+            self.pred_date = max(df['date']) + timedelta(days=1)
+            print(self.pred_date)
 
             if df.empty:
                 self.axes.text(0.5, 0.5, "Brak danych do wyświetlenia", ha="center", va="center")
             else:
-                self.axes.plot(df["Date"], df["Close"], label='Close', color='blue')
-                self.last_close_value = df["Close"].iloc[-1]
-                self.axes.set_xlabel("Data")
-                self.axes.set_ylabel("Cena [Close]")
+                self.axes.plot(df["date"], df["close"], label='close', color='blue')
+                self.last_close_value = df["close"].iloc[-1]
+                self.axes.set_xlabel("data")
+                self.axes.set_ylabel("cena [close]")
                 self.axes.legend()
         else:
             self.axes.text(0.5, 0.5, "Brak danych", ha="center", va="center")
@@ -238,7 +250,18 @@ class StockPredictionApp(tk.Tk):
         self.canvas.draw()
 
     def run_prediction(self):
-        predicted_value = self.mock_predict()
+        name = self.instrument_var.get()
+        if self.freshLoaded:
+            try:
+                x = pp.prepare_data_for_prediction(self.df, name)
+                x = pp.merge_vector_with_pred_date(x, self.pred_date)
+                predicted_value = pp.predict_value(x, name)[0]
+                self.freshLoaded = False
+            except Exception as e:
+                messagebox.showerror("Błąd", str(e))
+                return
+        
+        # predicted_value = self.mock_predict()
         if self.last_close_value is None:
             self.prediction_label.config(text="Brak ostatniej ceny do porównania", fg="black")
             return
@@ -254,9 +277,9 @@ class StockPredictionApp(tk.Tk):
                 fg="red"
             )
 
-    def mock_predict(self):
-        # TODO attach model
-        return random.uniform(100, 300)
+    # def mock_predict(self):
+    #     # TODO attach model
+    #     return random.uniform(100, 300)
 
 
 def main():
