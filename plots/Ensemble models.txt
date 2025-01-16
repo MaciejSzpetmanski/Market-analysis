@@ -1,0 +1,536 @@
+Ensemble models
+
+000001.SS
+MSE on base model: 1.70235479052442
+MSE on final model: 0.4193114307601336
+
+AAPL
+MSE on base model: 0.3230040527549605
+MSE on final model: 1.401835335477611
+
+AUDUSD=X
+MSE on base model: 0.018561212375195056
+MSE on final model: 0.009077454881278181
+
+BA
+MSE on base model: 0.0054134100627813795
+MSE on final model: 0.004386869560265278
+
+BTC-USD
+MSE on base model: 0.0037702917754430174
+MSE on final model: 0.002171110953580067
+
+DE
+MSE on base model: 0.002410233236108935
+MSE on final model: 0.002538271299012822
+
+ETH-USD
+MSE on base model: 0.005376136866546405
+MSE on final model: 0.004384234772120954
+
+EURUSD=X
+MSE on base model: 0.01894846109272682
+MSE on final model: 0.01977195287719036
+
+GBPUSD=X
+MSE on base model: 1.9215712135406917
+MSE on final model: 2.2623147529910863
+
+KO
+MSE on base model: 0.6146158083047376
+MSE on final model: 0.8518461845409069
+
+LMT
+MSE on base model: 36.21753779785372
+MSE on final model: 43.132710677019865
+
+MSFT
+MSE on base model: 0.0006117132937043442
+MSE on final model: 0.0008523084682481174
+
+NZDUSD=X
+MSE on base model: 0.008099681532551665
+MSE on final model: 0.1895678383274584
+
+PFE
+MSE on base model: 204.3667972979966
+MSE on final model: 0.004015833910752215
+
+TSLA
+MSE on base model: 4.723952196519661
+MSE on final model: 5.47245964615571
+
+USDCAD=X
+MSE on base model: 0.01627639984979522
+MSE on final model: 0.06795122139992536
+
+USDCHF=X
+MSE on base model: 0.005061719051211416
+MSE on final model: 0.004745841484872118
+
+USDJPY=X
+MSE on base model: 0.0008481262681036372
+MSE on final model: 0.0008367156621934497
+
+WMT
+MSE on base model: 0.0012060330595106195
+MSE on final model: 0.0015146413644813838
+
+XOM
+MSE on base model: 0.0030351584890469688
+MSE on final model: 0.003057582460077246
+
+^DJI
+MSE on base model: 0.0010028595261460799
+MSE on final model: 0.0010336666925929267
+
+^FCHI
+MSE on base model: 0.08310725977173795
+MSE on final model: 0.004863717788881809
+
+^FTSE
+MSE on base model: 0.006898579341189274
+MSE on final model: 0.007869746760151529
+
+^GDAXI
+MSE on base model: 0.8784320462659068
+MSE on final model: 0.0013813882604526895
+
+^GSPC
+MSE on base model: 0.0006494376161052756
+MSE on final model: 0.0009916918262018095
+
+^HSI
+MSE on base model: 0.015573140998098867
+MSE on final model: 0.021531158503252882
+
+^IXIC
+MSE on base model: 0.002672063965686302
+MSE on final model: 0.0017819977364888072
+
+^N225
+MSE on base model: 0.03977924019852492
+MSE on final model: 0.0054723940672199295
+
+^RUT
+MSE on base model: 1863.6139211374577
+MSE on final model: 2177.6597330962354
+
+Total MSE on base model: 72.91729267239961
+Total MSE on final model: 76.95034512973233
+
+####
+
+000001.SS
+Acc on base model: 0.5
+Acc on final model: 0.536
+
+AAPL
+Acc on base model: 0.42068965517241375
+Acc on final model: 0.6
+
+AUDUSD=X
+Acc on base model: 0.4733333333333334
+Acc on final model: 0.48
+
+BA
+Acc on base model: 0.5241379310344827
+Acc on final model: 0.472
+
+BTC-USD
+Acc on base model: 0.5093457943925234
+Acc on final model: 0.43999999999999995
+
+DE
+Acc on base model: 0.5517241379310345
+Acc on final model: 0.536
+
+ETH-USD
+Acc on base model: 0.4953271028037384
+Acc on final model: 0.552
+
+EURUSD=X
+Acc on base model: 0.5066666666666666
+Acc on final model: 0.52
+
+GBPUSD=X
+Acc on base model: 0.5666666666666667
+Acc on final model: 0.504
+
+KO
+Acc on base model: 0.6
+Acc on final model: 0.608
+
+LMT
+Acc on base model: 0.5379310344827586
+Acc on final model: 0.56
+
+MSFT
+Acc on base model: 0.5241379310344827
+Acc on final model: 0.46399999999999997
+
+NZDUSD=X
+Acc on base model: 0.4733333333333334
+Acc on final model: 0.536
+
+PFE
+Acc on base model: 0.503448275862069
+Acc on final model: 0.472
+
+TSLA
+Acc on base model: 0.48275862068965514
+Acc on final model: 0.472
+
+USDCAD=X
+Acc on base model: 0.48
+Acc on final model: 0.48
+
+USDCHF=X
+Acc on base model: 0.5066666666666666
+Acc on final model: 0.496
+
+USDJPY=X
+Acc on base model: 0.5933333333333333
+Acc on final model: 0.6
+
+WMT
+Acc on base model: 0.5379310344827586
+Acc on final model: 0.544
+
+XOM
+Acc on base model: 0.5724137931034483
+Acc on final model: 0.5680000000000001
+
+^DJI
+Acc on base model: 0.42068965517241375
+Acc on final model: 0.56
+
+^FCHI
+Acc on base model: 0.5202702702702703
+Acc on final model: 0.472
+
+^FTSE
+Acc on base model: 0.547945205479452
+Acc on final model: 0.536
+
+^GDAXI
+Acc on base model: 0.44594594594594594
+Acc on final model: 0.5680000000000001
+
+^GSPC
+Acc on base model: 0.5
+Acc on final model: 0.488
+
+^HSI
+Acc on base model: 0.46478873239436624
+Acc on final model: 0.52
+
+^IXIC
+Acc on base model: 0.5753424657534247
+Acc on final model: 0.552
+
+^N225
+Acc on base model: 0.5140845070422535
+Acc on final model: 0.504
+
+^RUT
+Acc on base model: 0.5342465753424658
+Acc on final model: 0.512
+
+Total Acc on base model: 0.5132123678755157
+Total Acc on final model: 0.5224827586206896
+
+####
+
+000001.SS
+Best acc: 0.536
+AAPL
+Best acc: 0.6
+AUDUSD=X
+Best acc: 0.48
+BA
+Best acc: 0.5241379310344827
+BTC-USD
+Best acc: 0.5093457943925234
+DE
+Best acc: 0.5517241379310345
+ETH-USD
+Best acc: 0.552
+EURUSD=X
+Best acc: 0.52
+GBPUSD=X
+Best acc: 0.5666666666666667
+KO
+Best acc: 0.608
+LMT
+Best acc: 0.56
+MSFT
+Best acc: 0.5241379310344827
+NZDUSD=X
+Best acc: 0.536
+PFE
+Best acc: 0.503448275862069
+TSLA
+Best acc: 0.48275862068965514
+USDCAD=X
+Best acc: 0.48
+USDCHF=X
+Best acc: 0.5066666666666666
+USDJPY=X
+Best acc: 0.6
+WMT
+Best acc: 0.544
+XOM
+Best acc: 0.5724137931034483
+^DJI
+Best acc: 0.56
+^FCHI
+Best acc: 0.5202702702702703
+^FTSE
+Best acc: 0.547945205479452
+^GDAXI
+Best acc: 0.5680000000000001
+^GSPC
+Best acc: 0.5
+^HSI
+Best acc: 0.52
+^IXIC
+Best acc: 0.5753424657534247
+^N225
+Best acc: 0.5140845070422535
+^RUT
+Best acc: 0.5342465753424658
+0.5378340979747895
+
+####
+
+000001.SS
+MSE on base model: 1.70235479052442
+MSE on final model: 0.4193114307601338
+
+Acc on base model: 0.5
+Acc on final model: 0.536
+
+
+AAPL
+MSE on base model: 0.3230040527549605
+MSE on final model: 1.401835335477611
+
+Acc on base model: 0.42068965517241375
+Acc on final model: 0.6
+
+
+AUDUSD=X
+MSE on base model: 0.018561212375195056
+MSE on final model: 0.009077454881278181
+
+Acc on base model: 0.4733333333333334
+Acc on final model: 0.48
+
+
+BA
+MSE on base model: 0.0054134100627813795
+MSE on final model: 0.004386869560265278
+
+Acc on base model: 0.5241379310344827
+Acc on final model: 0.472
+
+
+BTC-USD
+MSE on base model: 0.0037702917754430174
+MSE on final model: 0.002171110953580067
+
+Acc on base model: 0.5093457943925234
+Acc on final model: 0.43999999999999995
+
+
+DE
+MSE on base model: 0.002410233236108935
+MSE on final model: 0.002538271299012822
+
+Acc on base model: 0.5517241379310345
+Acc on final model: 0.536
+
+
+ETH-USD
+MSE on base model: 0.005376136866546405
+MSE on final model: 0.004384234772120954
+
+Acc on base model: 0.4953271028037384
+Acc on final model: 0.552
+
+
+EURUSD=X
+MSE on base model: 0.01894846109272682
+MSE on final model: 0.01977195287719036
+
+Acc on base model: 0.5066666666666666
+Acc on final model: 0.52
+
+
+GBPUSD=X
+MSE on base model: 1.9215712135406917
+MSE on final model: 2.2623147529910863
+
+Acc on base model: 0.5666666666666667
+Acc on final model: 0.504
+
+
+KO
+MSE on base model: 0.6146158083047376
+MSE on final model: 0.8518461845409069
+
+Acc on base model: 0.6
+Acc on final model: 0.608
+
+
+LMT
+MSE on base model: 36.21753779785372
+MSE on final model: 43.132710677019865
+
+Acc on base model: 0.5379310344827586
+Acc on final model: 0.56
+
+
+MSFT
+MSE on base model: 0.0006117132937043442
+MSE on final model: 0.0008523084682481174
+
+Acc on base model: 0.5241379310344827
+Acc on final model: 0.46399999999999997
+
+
+NZDUSD=X
+MSE on base model: 0.008099681532551665
+MSE on final model: 0.1895678383274584
+
+Acc on base model: 0.4733333333333334
+Acc on final model: 0.536
+
+
+PFE
+MSE on base model: 204.3667972979966
+MSE on final model: 0.004015833910752215
+
+Acc on base model: 0.503448275862069
+Acc on final model: 0.472
+
+
+TSLA
+MSE on base model: 4.723952196519661
+MSE on final model: 5.47245964615571
+
+Acc on base model: 0.48275862068965514
+Acc on final model: 0.472
+
+
+USDCAD=X
+MSE on base model: 0.01627639984979522
+MSE on final model: 0.06795122139992536
+
+Acc on base model: 0.48
+Acc on final model: 0.48
+
+
+USDCHF=X
+MSE on base model: 0.005061719051211416
+MSE on final model: 0.004745841484872118
+
+Acc on base model: 0.5066666666666666
+Acc on final model: 0.496
+
+
+USDJPY=X
+MSE on base model: 0.0008481262681036372
+MSE on final model: 0.0008367156621934497
+
+Acc on base model: 0.5933333333333333
+Acc on final model: 0.6
+
+
+WMT
+MSE on base model: 0.0012060330595106195
+MSE on final model: 0.0015146413644813838
+
+Acc on base model: 0.5379310344827586
+Acc on final model: 0.544
+
+
+XOM
+MSE on base model: 0.0030351584890469688
+MSE on final model: 0.003057582460077246
+
+Acc on base model: 0.5724137931034483
+Acc on final model: 0.5680000000000001
+
+
+^DJI
+MSE on base model: 0.0010028595261460799
+MSE on final model: 0.0010336666925929267
+
+Acc on base model: 0.42068965517241375
+Acc on final model: 0.56
+
+
+^FCHI
+MSE on base model: 0.08310725977173795
+MSE on final model: 0.004863717788881809
+
+Acc on base model: 0.5202702702702703
+Acc on final model: 0.472
+
+
+^FTSE
+MSE on base model: 0.006898579341189274
+MSE on final model: 0.007869746760151529
+
+Acc on base model: 0.547945205479452
+Acc on final model: 0.536
+
+
+^GDAXI
+MSE on base model: 0.8784320462659068
+MSE on final model: 0.0013813882604526895
+
+Acc on base model: 0.44594594594594594
+Acc on final model: 0.5680000000000001
+
+
+^GSPC
+MSE on base model: 0.0006494376161052756
+MSE on final model: 0.0009916918262018095
+
+Acc on base model: 0.5
+Acc on final model: 0.488
+
+
+^HSI
+MSE on base model: 0.015573140998098867
+MSE on final model: 0.021531158503252882
+
+Acc on base model: 0.46478873239436624
+Acc on final model: 0.52
+
+
+^IXIC
+MSE on base model: 0.002672063965686302
+MSE on final model: 0.0017819977364888072
+
+Acc on base model: 0.5753424657534247
+Acc on final model: 0.552
+
+
+^N225
+MSE on base model: 0.03977924019852492
+MSE on final model: 0.0054723940672199295
+
+Acc on base model: 0.5140845070422535
+Acc on final model: 0.504
+
+
+^RUT
+MSE on base model: 1863.6139211374577
+MSE on final model: 2177.6597330962354
+
+Acc on base model: 0.5342465753424658
+Acc on final model: 0.512

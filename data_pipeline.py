@@ -423,6 +423,9 @@ def pipeline():
     df_train = add_fractal_short_schemas(df_train, SHORT_SCHEMA_PATH, GROUP_BY_COLUMN, SHORT_SCHEMA_PREFIX)
     df_val = add_fractal_short_schemas(df_val, SHORT_SCHEMA_PATH, GROUP_BY_COLUMN, SHORT_SCHEMA_PREFIX)
     df_test = add_fractal_short_schemas(df_test, SHORT_SCHEMA_PATH, GROUP_BY_COLUMN, SHORT_SCHEMA_PREFIX)
+    
+    # TODO technical analysis indicators
+    # TODO add hurst exponent
 
     print("Usuwanie pustych kolumn")
     df_train, df_val, df_test = remove_empty_columns(df_train, df_val, df_test)
@@ -442,6 +445,7 @@ def pipeline():
     val_sets, y_val_sets = get_target_columns(val_sets, MAX_TARGET_HORIZON)
     test_sets, y_test_sets = get_target_columns(test_sets, MAX_TARGET_HORIZON)
     
+    # TODO remove yer columns
     columns_to_drop = ["name"]
 
     print("Usuwanie kolumny z nazwą")

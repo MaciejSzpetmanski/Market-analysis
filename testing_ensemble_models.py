@@ -4,7 +4,7 @@ import os
 import joblib
 
 path = "D:\Studia\semestr7\inźynierka\Market-analysis"
-path = "C:\Studia\Market-analysis"
+# path = "C:\Studia\Market-analysis"
 os.chdir(path)
 
 #%% categorize y
