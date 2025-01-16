@@ -1,29 +1,32 @@
 import numpy as np
 
-def hurst_exponent(ts, max_lag=20):
-    """
-    Calculate the Hurst Exponent of a time series.
+# def hurst(data, max_lag=10):
+#     """
+#     source: https://www.linkedin.com/pulse/rolling-hurst-exponent-python-trading-jakub-polec-e92yf
+#     Calculates the Hurst Exponent using the Rescaled Range (R/S) analysis method.
+#     """
+#     # requires max_lag + 3 observations
+#     if len(data) < max_lag + 3:
+#         return 0.5
+#         # return 0.5, 1.5
+
+#     log_returns = np.diff(np.log(data))
+#     # lags = range(2, max_lag + 1)
+#     # tau = [np.sqrt(np.std(np.subtract(log_returns[lag:], log_returns[:-lag]))) for lag in lags]
     
-    Parameters:
-        ts (array-like): The time series data (1D array).
-        max_lag (int): Maximum lag to consider for the analysis.
+#     # poly = np.polyfit(np.log(lags), np.log(tau), 1)
+#     # hurst_exponent = poly[0]*2.0
+#     # fractal_dimension = 2 - hurst_exponent
     
-    Returns:
-        float: Estimated Hurst Exponent.
-    """
-    lags = range(2, max_lag + 1)
-    tau = []
-
-    for lag in lags:
-        # Calculate lagged differences
-        diff = np.diff(ts, n=lag)
-        # Calculate standard deviation of differences
-        tau.append(np.std(diff))
-
-    # Fit a line in log-log space to estimate H
-    log_lags = np.log(lags)
-    log_tau = np.log(tau)
-    slope, _ = np.polyfit(log_lags, log_tau, 1)
-
-    # The slope corresponds to the Hurst Exponent
-    return slope
+    
+#     lags = range(2, max_lag + 1)
+    
+#     tau = []
+#     for lag in lags:
+#         tau_lag = np.sqrt(np.std(np.subtract(log_returns[lag:], log_returns[:-lag])))
+#         tau.append(tau_lag)
+    
+#     poly = np.polyfit(np.log(lags), np.log(tau), 1)
+#     hurst_exponent = poly[0] * 2.0
+    
+#     return hurst_exponent

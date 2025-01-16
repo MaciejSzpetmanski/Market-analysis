@@ -1,11 +1,16 @@
+import pandas as pd
+import numpy as np
+
 def rsi(data, window=5):
     delta = data.diff(1)
     gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
     rs = gain / loss
-    return 100 - (100 / (1 + rs))
+    result_with_nans = 100 - (100 / (1 + rs))
+    result = np.nan_to_num(result_with_nans, nan=50)
+    return result
 
-def macd(data, fast=12, slow=26, signal=9):
+def macd(data, fast=5, slow=10, signal=5):
     ema_fast = data.ewm(span=fast, adjust=False).mean()
     ema_slow = data.ewm(span=slow, adjust=False).mean()
     macd_line = ema_fast - ema_slow
@@ -15,54 +20,37 @@ def macd(data, fast=12, slow=26, signal=9):
 
 def bollinger_bands(data, window=5, num_std_dev=2):
     sma = data.rolling(window=window).mean()
+    sma = np.nan_to_num(sma, nan=0)
     std_dev = data.rolling(window=window).std()
+    std_dev = std_dev.bfill()
     upper_band = sma + (std_dev * num_std_dev)
     lower_band = sma - (std_dev * num_std_dev)
     return sma, upper_band, lower_band
 
 def adx(high, low, close, window=5):
-    # Krok 1: Oblicz True Range (TR)
     tr1 = high - low
     tr2 = abs(high - close.shift(1))
     tr3 = abs(low - close.shift(1))
     true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
 
-    # Krok 2: Oblicz Directional Movement (DM)
     plus_dm = high.diff()
     minus_dm = low.diff()
     
     plus_dm = np.where((plus_dm > minus_dm) & (plus_dm > 0), plus_dm, 0)
     minus_dm = np.where((minus_dm > plus_dm) & (minus_dm > 0), minus_dm, 0)
 
-    # Krok 3: Wygładź TR, DM+ i DM- przy użyciu średniej wykładniczej
-    atr = true_range.rolling(window=window).mean()
-    plus_dm_smoothed = pd.Series(plus_dm).rolling(window=window).mean()
-    minus_dm_smoothed = pd.Series(minus_dm).rolling(window=window).mean()
+    atr = true_range.rolling(window=window, min_periods=1).mean()
+    plus_dm_smoothed = pd.Series(plus_dm, index=high.index).rolling(window=window, min_periods=1).mean()
+    minus_dm_smoothed = pd.Series(minus_dm, index=low.index).rolling(window=window, min_periods=1).mean()
 
-    # Krok 4: Oblicz DI+ i DI-
     plus_di = 100 * (plus_dm_smoothed / atr)
     minus_di = 100 * (minus_dm_smoothed / atr)
 
-    # Krok 5: Oblicz DX
     dx = (abs(plus_di - minus_di) / (plus_di + minus_di)) * 100
+    adx_list = dx.rolling(window=window, min_periods=1).mean()
 
-    # Krok 6: Oblicz ADX
-    adx = dx.rolling(window=window).mean()
+    adx_list = adx_list.bfill()
+    plus_di = plus_di.bfill()
+    minus_di = minus_di.bfill()
 
-    return adx, plus_di, minus_di
-
-
-# TODO replace Nan with 0
-
-import pandas as pd
-import numpy as np
-
-# Przykładowe dane (zastąp swoimi danymi)
-data = pd.Series(np.random.randn(100).cumsum())
-
-# Obliczanie SMA i RSI
-# sma_20 = sma(data, window=20)
-# rsi_14 = rsi(data, window=14)
-
-# print("SMA:", sma_20.tail())
-# print("RSI:", rsi_14.tail())
+    return adx_list, plus_di, minus_di

@@ -10,6 +10,8 @@ from indicators.cykl import wykryj_typ_cyklu
 from indicators.EMA import ema
 from sklearn.preprocessing import StandardScaler
 import pickle
+from indicators.technical_analysis import rsi, macd, bollinger_bands, adx
+import hurst
 
 #%% global variables
 
@@ -19,13 +21,17 @@ NAME_TO_REMOVE = "EURGBP=X"
 GROUP_BY_COLUMN = "name"
 LONG_SCHEMA_PATH = "indicators/Schemat zmienna długość"
 LONG_SCHEMA_PREFIX = "long_formation_"
-SCHEMA_WIDTH = 5 #30 #5 #3 #10 #20
+TECHNICAL_ANALYSIS_PREFIX = "technical"
+# TODO change minimal length according to SCHEMA_WIDTH and TIME_SERIES_LENGTH
+SCHEMA_WIDTH = 20 #5 #30 #5 #3 #10 #20
+HURST_WIDTH = 100
 EMA_PERIODS = [10, 20, 50, 100, 200]
 SHORT_SCHEMA_PATH = "indicators/Schemat stała długość"
 SHORT_SCHEMA_PREFIX = "short_formation_"
 TRAIN_COLUMNS_PATH = "scalers/train_columns.pkl"
 COLUMNS_TO_STANDARDIZE = ["adjusted_close", "close", "high", "low", "open", "volume"]
 SCALERS_PATH = "scalers/scalers.pkl"
+TECHNICAL_SCALERS_PATH = "scalers/technical_scalers.pkl"
 TARGET_COLUMN = "close"
 SORT_COLUMNS = ["date_year", "date_month", "date_day_of_month"]
 TIME_SERIES_LENGTH = 5 #30 #5 #3 #10 #20
@@ -116,7 +122,6 @@ def encode_names(df):
     df["name"] = name_column
     return df
 
-
 def split_data(df, offset_years=1, test_size=0.6, random_state=42):
     last_date = df['date'].max()
     split_date = last_date - pd.DateOffset(years=offset_years)
@@ -143,6 +148,49 @@ def split_data(df, offset_years=1, test_size=0.6, random_state=42):
     df_test = df_test.reset_index(drop=True)
     
     return df_train, df_val, df_test
+
+def add_technical_analysis_columns(df, group_by_column, prefix="technical"):
+    # rsi
+    rsi_period = SCHEMA_WIDTH
+    df[f"{prefix}_rsi"] = np.concatenate([rsi(group.close, rsi_period) for _, group in df.groupby(group_by_column)])
+    # macd
+    macd_period_fast = max(1, SCHEMA_WIDTH//2)
+    macd_period_slow = SCHEMA_WIDTH
+    macd_period_signal = macd_period_fast
+    macd_results = np.concatenate([
+        np.column_stack(macd(group.close, macd_period_fast, macd_period_slow, macd_period_signal)) 
+        for _, group in df.groupby(group_by_column)
+    ])
+    df[[f"{prefix}_macd", f"{prefix}_signal", f"{prefix}_histogram"]] = macd_results
+    # bollinger_bands
+    bollinger_bands_window = SCHEMA_WIDTH
+    bollinger_bands_results = np.concatenate([
+        np.column_stack(bollinger_bands(group.close, bollinger_bands_window)) 
+        for _, group in df.groupby(group_by_column)
+    ])
+    df[[f"{prefix}_sma", f"{prefix}_upper_band", f"{prefix}_lower_band"]] = bollinger_bands_results
+    # adx
+    adx_window = SCHEMA_WIDTH
+    adx_results = np.concatenate([
+        np.column_stack(adx(group.high, group.low, group.close, adx_window)) 
+        for _, group in df.groupby(group_by_column)
+    ])
+    df[[f"{prefix}_adx", f"{prefix}_plus_di", f"{prefix}_minus_di"]] = adx_results
+    return df
+
+def add_hurst_dim_columns(df, group_by_column, width=100):
+    def _apply_hurst_function(df, width):
+        n = len(df)
+        if width < 0:
+            width = 0
+        res = np.full(n, 0.5)
+        for i in range(width-1, n):
+            data = df[i+1-width:i+1]["close"]
+            res[i] = hurst.compute_Hc(data)[0]
+        return res
+
+    df["hurst_exponent"] = np.concatenate([_apply_hurst_function(group, width) for _, group in df.groupby(group_by_column)])
+    return df
 
 def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
     """
@@ -391,17 +439,37 @@ def pipeline():
     print("Podział na zbiory")
     df_train, df_val, df_test = split_data(df)
     
-    print("Standaryzacja kolumn")
     df_train.volume = df_train.volume.astype(float)
     df_val.volume = df_val.volume.astype(float)
     df_test.volume = df_test.volume.astype(float)
+    
+    # TODO hurst exponent
+    print("Wyliczanie wykładnika Hursta")
+    df_train = add_hurst_dim_columns(df_train, GROUP_BY_COLUMN, HURST_WIDTH)
+    df_val = add_hurst_dim_columns(df_val, GROUP_BY_COLUMN, HURST_WIDTH)
+    df_test = add_hurst_dim_columns(df_test, GROUP_BY_COLUMN, HURST_WIDTH)
 
+    print("Standaryzacja kolumn")
     df_train, scalers = standardize_training_columns(df_train, COLUMNS_TO_STANDARDIZE, GROUP_BY_COLUMN)
     df_val = standardize_columns(df_val, scalers, COLUMNS_TO_STANDARDIZE, GROUP_BY_COLUMN)
     df_test = standardize_columns(df_test, scalers, COLUMNS_TO_STANDARDIZE, GROUP_BY_COLUMN)
     
     print("Zapisywanie obiektów skalujących")
     save_object(scalers, SCALERS_PATH)
+    
+    # TODO technical analysis indicators
+    print("Dodawanie wskaźników analizy techniczej")
+    df_train = add_technical_analysis_columns(df_train, GROUP_BY_COLUMN, prefix=TECHNICAL_ANALYSIS_PREFIX)
+    df_val = add_technical_analysis_columns(df_val, GROUP_BY_COLUMN, prefix=TECHNICAL_ANALYSIS_PREFIX)
+    df_test = add_technical_analysis_columns(df_test, GROUP_BY_COLUMN, prefix=TECHNICAL_ANALYSIS_PREFIX)
+    # TODO scaling
+    print("Standaryzacja kolumn analizy technicznej")
+    technical_analysis_columns = [col for col in df_train.columns if col.startswith(TECHNICAL_ANALYSIS_PREFIX)]
+    df_train, technical_analysis_scalers = standardize_training_columns(df_train, technical_analysis_columns, GROUP_BY_COLUMN)
+    df_val = standardize_columns(df_val, technical_analysis_scalers, technical_analysis_columns, GROUP_BY_COLUMN)
+    df_test = standardize_columns(df_test, technical_analysis_scalers, technical_analysis_columns, GROUP_BY_COLUMN)
+    print("Zapisywanie obiektów skalujących dla analizy technicznej")
+    save_object(technical_analysis_scalers, TECHNICAL_SCALERS_PATH)
     
     print("Dodawanie cech fraktalnych o zmiennej długości")
     df_train = add_fractal_long_schemas(df_train, LONG_SCHEMA_PATH, GROUP_BY_COLUMN, LONG_SCHEMA_PREFIX, SCHEMA_WIDTH)
@@ -424,9 +492,6 @@ def pipeline():
     df_val = add_fractal_short_schemas(df_val, SHORT_SCHEMA_PATH, GROUP_BY_COLUMN, SHORT_SCHEMA_PREFIX)
     df_test = add_fractal_short_schemas(df_test, SHORT_SCHEMA_PATH, GROUP_BY_COLUMN, SHORT_SCHEMA_PREFIX)
     
-    # TODO technical analysis indicators
-    # TODO add hurst exponent
-
     print("Usuwanie pustych kolumn")
     df_train, df_val, df_test = remove_empty_columns(df_train, df_val, df_test)
     
@@ -446,9 +511,11 @@ def pipeline():
     test_sets, y_test_sets = get_target_columns(test_sets, MAX_TARGET_HORIZON)
     
     # TODO remove yer columns
-    columns_to_drop = ["name"]
+    # year_columns = df_train.filter(regex=r'^date_year(_y|\_\d+)?$').columns
+    year_columns = ["date_year", "date_year_y"] + [f"date_year_{i}" for i in range(1, TIME_SERIES_LENGTH)]
+    columns_to_drop = ["name"] + year_columns
 
-    print("Usuwanie kolumny z nazwą")
+    print("Usuwanie kolumny z nazwą i rokiem")
     train_sets = drop_columns_from_sets(train_sets, MAX_TARGET_HORIZON, columns_to_drop)
     val_sets = drop_columns_from_sets(val_sets, MAX_TARGET_HORIZON, columns_to_drop)
     test_sets = drop_columns_from_sets(test_sets, MAX_TARGET_HORIZON, columns_to_drop)
