@@ -38,7 +38,7 @@ def load_dataset(directory_name, name, target_horizon):
         y = pd.read_csv(y_file_path)
         return df, y
 
-directory_name = "datasets"
+directory_name = "datasets_date"
 
 df_train, y_train = load_dataset(directory_name, "train", 1)
 df_val, y_val = load_dataset(directory_name, "val", 1)
@@ -109,13 +109,13 @@ for name in names:
     data_y_test_trim[name] = data_y_test[name][data_x_test_trim[name].index]
     
     # droping date
-    data_x_train[name] = data_x_train[name].drop(columns=['date'])
-    data_x_val[name] = data_x_val[name].drop(columns=['date'])
-    data_x_test[name] = data_x_test[name].drop(columns=['date'])
+    data_x_train[name] = data_x_train[name].drop(columns=['date', 'date_year_y'])
+    data_x_val[name] = data_x_val[name].drop(columns=['date', 'date_year_y'])
+    data_x_test[name] = data_x_test[name].drop(columns=['date', 'date_year_y'])
     
-    data_x_train_trim[name] = data_x_train_trim[name].drop(columns=['date'])
-    data_x_val_trim[name] = data_x_val_trim[name].drop(columns=['date'])
-    data_x_test_trim[name] = data_x_test_trim[name].drop(columns=['date'])
+    data_x_train_trim[name] = data_x_train_trim[name].drop(columns=['date', 'date_year_y'])
+    data_x_val_trim[name] = data_x_val_trim[name].drop(columns=['date', 'date_year_y'])
+    data_x_test_trim[name] = data_x_test_trim[name].drop(columns=['date', 'date_year_y'])
     
 #%% first level models
 

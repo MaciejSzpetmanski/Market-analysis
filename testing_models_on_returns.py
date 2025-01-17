@@ -4,7 +4,7 @@ import os
 import joblib
 
 path = "D:\Studia\semestr7\inźynierka\Market-analysis"
-path = "C:\Studia\Market-analysis"
+# path = "C:\Studia\Market-analysis"
 os.chdir(path)
 
 #%% categorize y
@@ -211,9 +211,12 @@ print("Best Validation MSE:", best_val_mse)
 # Best Parameters: {'alpha': 12, 'l1_ratio': 0.9}
 # Best Validation MSE: 0.18636560843446726
 
+# latest
+# Best Parameters: {'alpha': 3, 'l1_ratio': 0.8}
+
 #%% tuned ElasticNet
 
-model = ElasticNet(alpha=12, l1_ratio=0.9, random_state=42)
+model = ElasticNet(alpha=3, l1_ratio=0.8, random_state=42)
 model.fit(df_train, y_train)
 y_pred = model.predict(df_test)
 
@@ -278,9 +281,12 @@ for n_estimators in n_estimators_list:
 print(f"\nBest Params: {best_params}, Best Validation MSE: {best_score}")
 # Best Params: {'n_estimators': 100, 'max_depth': None}, Best Validation MSE: 232.47020542259972
 
+# latest
+# Best Params: {'n_estimators': 300, 'max_depth': 10}, Best Validation MSE: 4.738005509956569
+
 #%% tuned RandomForestRegressor
 
-model = RandomForestRegressor(n_estimators=100, random_state=42, max_depth=None, n_jobs=-1)
+model = RandomForestRegressor(n_estimators=300, random_state=42, max_depth=10, n_jobs=-1)
 model.fit(df_train, y_train)
 y_pred = model.predict(df_test)
 

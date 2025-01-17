@@ -4,7 +4,7 @@ import os
 import joblib
 
 path = "D:\Studia\semestr7\inźynierka\Market-analysis"
-path = "C:\Studia\Market-analysis"
+# path = "C:\Studia\Market-analysis"
 os.chdir(path)
 
 #%% reading data
@@ -88,18 +88,18 @@ y_test_list = [y_test_1, y_test_2, y_test_3, y_test_4, y_test_5]
 
 #%% getting full data - later
 
-def load_data_with_max_horizon(directory_name, name, max_target_horizon):
-    df = None
-    y = None
-    for k in range(1, max_target_horizon + 1):
-        df_input, y_input = load_dataset(directory_name, name, k)
-        df = pd.concat([df, df_input], ignore_index=True)
-        y = pd.concat([y, y_input], ignore_index=True)
-    return df, y
+# def load_data_with_max_horizon(directory_name, name, max_target_horizon):
+#     df = None
+#     y = None
+#     for k in range(1, max_target_horizon + 1):
+#         df_input, y_input = load_dataset(directory_name, name, k)
+#         df = pd.concat([df, df_input], ignore_index=True)
+#         y = pd.concat([y, y_input], ignore_index=True)
+#     return df, y
 
-df_train, y_train = load_data_with_max_horizon(directory_name, "train", 5)
-df_val, y_val = load_data_with_max_horizon(directory_name, "val", 5)
-df_test, y_test = load_data_with_max_horizon(directory_name, "test", 5)
+# df_train, y_train = load_data_with_max_horizon(directory_name, "train", 5)
+# df_val, y_val = load_data_with_max_horizon(directory_name, "val", 5)
+# df_test, y_test = load_data_with_max_horizon(directory_name, "test", 5)
 
 #%% merging data
 
@@ -417,7 +417,7 @@ plot_prediction_by_names(model, x_test_list, y_test_list)
 
 #%% parameters for ElasticNet
 
-# y sey to inc
+# y set to inc
 
 from sklearn.linear_model import ElasticNet
 
@@ -455,10 +455,15 @@ print("Best Validation MSE:", best_val_mse)
 # inc
 # Best Parameters: {'alpha': 0.02, 'l1_ratio': 0.9}
 
+# latest
+# Best Parameters: {'alpha': 0.02, 'l1_ratio': 0.9}
+
 #%% tuned ElasticNet
 
 model = ElasticNet(alpha=0.003, l1_ratio=0.8, random_state=42)
+# model = ElasticNet(alpha=0.02, l1_ratio=0.9, random_state=42)
 model.fit(df_train, y_train)
+# model.fit(df_train, y_inc_train)
 
 y_pred = model.predict(df_test)
 
@@ -603,6 +608,9 @@ print(f"Best Params: {grid_search.best_params_}, Validation MSE: {val_mse}, R-sq
 # Best Params: {'max_depth': None, 'n_estimators': 300}, Validation MSE: 0.00883993516026214, R-squared: 0.9951073534338416
 # Best Params: {'max_depth': None, 'n_estimators': 350}, Validation MSE: 0.008807718106650759, R-squared: 0.9951251846343953
 
+# latest
+# Best Params: {'max_depth': None, 'n_estimators': 350}, Validation MSE: 0.007992546296354142, R-squared: 0.9955711064774485
+
 #%% custom metric
 
 def custom_score(y_true, y_pred):
@@ -639,7 +647,7 @@ print(f"Best Params: {grid_search.best_params_}, Validation MSE: {val_mse}, R-sq
 #%% tuned random forest
 
 model = RandomForestRegressor(n_estimators=350, random_state=42, max_depth=None, n_jobs=-1)
-model = RandomForestRegressor(n_estimators=300, random_state=42, max_depth=10, n_jobs=-1)
+# model = RandomForestRegressor(n_estimators=300, random_state=42, max_depth=10, n_jobs=-1)
 model.fit(df_train, y_train)
 
 y_pred = model.predict(df_test)
@@ -797,6 +805,9 @@ print(f"\nBest Params: {best_params}")
 print(f"Best Validation Custom Score: {best_score}")
 # Best Params: {'n_estimators': 100, 'max_depth': 3, 'learning_rate': 0.1, 'alpha': 0.1, 'gamma': 1}
 # Best Validation Custom Score: 0.9836375966155018
+
+# latest
+# 
 
 #%% tuned xgboost
 

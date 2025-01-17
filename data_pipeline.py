@@ -37,6 +37,7 @@ SORT_COLUMNS = ["date_year", "date_month", "date_day_of_month"]
 TIME_SERIES_LENGTH = 5 #30 #5 #3 #10 #20
 MAX_TARGET_HORIZON = 5
 DATA_OUTPUT_DIRECTORY = "datasets"
+DATA_WITH_DATE_OUTPUT_DIRECTORY = "datasets_date"
 X_TRAIN_OUTPUT_NAME = "df_train"
 X_VAL_OUTPUT_NAME = "df_val"
 X_TEST_OUTPUT_NAME = "df_test"
@@ -511,11 +512,22 @@ def pipeline():
     test_sets, y_test_sets = get_target_columns(test_sets, MAX_TARGET_HORIZON)
     
     # TODO remove yer columns
-    # year_columns = df_train.filter(regex=r'^date_year(_y|\_\d+)?$').columns
-    year_columns = ["date_year", "date_year_y"] + [f"date_year_{i}" for i in range(1, TIME_SERIES_LENGTH)]
+    year_columns = ["date_year"] + [f"date_year_{i}" for i in range(1, TIME_SERIES_LENGTH)]
     columns_to_drop = ["name"] + year_columns
+    
+    print("Usuwanie kolumny z nazwą i rokiem (bez końcowego)")
+    train_sets = drop_columns_from_sets(train_sets, MAX_TARGET_HORIZON, columns_to_drop)
+    val_sets = drop_columns_from_sets(val_sets, MAX_TARGET_HORIZON, columns_to_drop)
+    test_sets = drop_columns_from_sets(test_sets, MAX_TARGET_HORIZON, columns_to_drop)
+    
+    print("Zapisywanie zbiorów danych (z uwzględnieniem roku)")
+    save_data_sets(train_sets, y_train_sets, DATA_WITH_DATE_OUTPUT_DIRECTORY, X_TRAIN_OUTPUT_NAME, Y_TRAIN_OUTPUT_NAME)
+    save_data_sets(val_sets, y_val_sets, DATA_WITH_DATE_OUTPUT_DIRECTORY, X_VAL_OUTPUT_NAME, Y_VAL_OUTPUT_NAME)
+    save_data_sets(test_sets, y_test_sets, DATA_WITH_DATE_OUTPUT_DIRECTORY, X_TEST_OUTPUT_NAME, Y_TEST_OUTPUT_NAME)
 
-    print("Usuwanie kolumny z nazwą i rokiem")
+    columns_to_drop = ["date_year_y"]    
+
+    print("Usuwanie kolumny z rokiem predykcji")
     train_sets = drop_columns_from_sets(train_sets, MAX_TARGET_HORIZON, columns_to_drop)
     val_sets = drop_columns_from_sets(val_sets, MAX_TARGET_HORIZON, columns_to_drop)
     test_sets = drop_columns_from_sets(test_sets, MAX_TARGET_HORIZON, columns_to_drop)
