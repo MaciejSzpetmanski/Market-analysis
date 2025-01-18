@@ -12,6 +12,8 @@ from sklearn.preprocessing import StandardScaler
 import pickle
 from indicators.technical_analysis import rsi, macd, bollinger_bands, adx
 import hurst
+from statsmodels.tsa.arima.model import ARIMA
+from pmdarima import auto_arima
 
 #%% global variables
 
@@ -192,6 +194,27 @@ def add_hurst_dim_columns(df, group_by_column, width=100):
 
     df["hurst_exponent"] = np.concatenate([_apply_hurst_function(group, width) for _, group in df.groupby(group_by_column)])
     return df
+
+# TODO
+def add_arima_prediction(df, group_by_column, width=SCHEMA_WIDTH):
+    def _apply_arima(df, width):
+        n = len(df)
+        arima_preds = df["close"].copy()
+        for i in range(width-1, n):
+            x = df["close"][i+1-width:i+1]
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                auto_model = auto_arima(x, seasonal=False, stepwise=True, trace=False, n_jobs=-1)
+                model = ARIMA(x, order=auto_model.order)
+                model_fit = model.fit()
+                pred = model_fit.forecast(steps=1)
+                arima_preds.iloc[i] = pred
+        return arima_preds
+    
+    df["arima"] = np.concatenate([_apply_arima(group, width) for _, group in df.groupby(group_by_column)])
+    return df
+        
+###
 
 def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
     """
@@ -455,6 +478,12 @@ def pipeline():
     df_val = standardize_columns(df_val, scalers, COLUMNS_TO_STANDARDIZE, GROUP_BY_COLUMN)
     df_test = standardize_columns(df_test, scalers, COLUMNS_TO_STANDARDIZE, GROUP_BY_COLUMN)
     
+    # TODO add arima
+    print("Wykorzystanie ARIMA")
+    df_train = add_arima_prediction(df_train, GROUP_BY_COLUMN, width=SCHEMA_WIDTH)
+    df_val = add_arima_prediction(df_val, GROUP_BY_COLUMN, width=SCHEMA_WIDTH)
+    df_test = add_arima_prediction(df_test, GROUP_BY_COLUMN, width=SCHEMA_WIDTH)
+    
     print("Zapisywanie obiektów skalujących")
     save_object(scalers, SCALERS_PATH)
     
@@ -511,7 +540,7 @@ def pipeline():
     val_sets, y_val_sets = get_target_columns(val_sets, MAX_TARGET_HORIZON)
     test_sets, y_test_sets = get_target_columns(test_sets, MAX_TARGET_HORIZON)
     
-    # TODO remove yer columns
+    # TODO remove year columns
     year_columns = ["date_year"] + [f"date_year_{i}" for i in range(1, TIME_SERIES_LENGTH)]
     columns_to_drop = ["name"] + year_columns
     
