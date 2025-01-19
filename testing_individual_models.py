@@ -17,6 +17,12 @@ def categorize_y(x, y, pred_name="close"):
     res[res < 0] = 0
     return res
 
+def categorize_y_from_inc(y_inc):
+    res = y_inc.copy()
+    res[res >= 0] = 1
+    res[res < 0] = 0
+    return res
+
 #%%  y to increments
 
 def y_to_increments(x, y, pred_name="close"):
@@ -287,6 +293,37 @@ print(cum_acc)
         
 plot_prediction(models, data_x_test, data_y_test, names)
 
+#%%
+
+from sklearn.metrics import roc_auc_score, roc_curve
+
+y_true = []
+y_scores = []
+
+for name in names:
+    model, x, y = models[name], data_x_test[name], data_y_test[name]
+    y_true.append(categorize_y_from_inc(y))
+    pred = model.predict(x)
+    y_scores.append(pred)
+
+y_true = np.concatenate(y_true)
+y_scores = np.concatenate(y_scores)
+
+auc_score = roc_auc_score(y_true, y_scores)
+print(f'ROC AUC Score: {auc_score:.4f}')
+
+fpr, tpr, _ = roc_curve(y_true, y_scores)
+plt.figure(figsize=(8, 6))
+plt.plot(fpr, tpr, color='blue', lw=2)
+plt.plot([0, 1], [0, 1], color='gray', linestyle='--')  # Diagonal line (random model)
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate (FPR)')
+plt.ylabel('True Positive Rate (TPR)')
+plt.title('Receiver Operating Characteristic (ROC) Curve')
+plt.legend(loc='lower right')
+plt.grid()
+plt.show()
 
 
 

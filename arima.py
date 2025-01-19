@@ -72,6 +72,7 @@ def split_data(x, y, name_columns):
     return res_set_x, res_set_y
 
 name_columns = [col for col in df_train.columns if col.startswith("name")]
+names = [col.lstrip("name_") for col in  name_columns]
 data_x_train, data_y_train = split_data(df_train, y_train, name_columns)
 data_x_val, data_y_val = split_data(df_val, y_val, name_columns)
 data_x_test, data_y_test = split_data(df_test, y_test, name_columns)
@@ -183,12 +184,48 @@ len(pred_inc[pred_inc < 0])
 
 #%%
 
+width = 20
+accuracy = []
+
+for name in names:
+    print(name)
+    test = data_x_test[name]["close"]
+    forecast = []
+    y_test = data_x_test[name]["close"][width:-1]
+    for i in range(0, len(test)-width-1):
+        x = test[i:i+width]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            auto_model = auto_arima(x, seasonal=False, stepwise=True, trace=False)
+            model = ARIMA(x, order=auto_model.order)
+            model_fit = model.fit()
+        
+        pred = model_fit.forecast(steps=1)
+        forecast.append(pred)
+    
+    mae = mean_absolute_error(y_test, forecast)
+    print(f"Mean Absolute Error: {mae}")
+    
+    # Plot the results
+    plt.figure(figsize=(10,5))
+    plt.plot(y_test, label="Actual Prices", color='green')
+    plt.plot(y_test.index, forecast, label="Predicted Prices", color='red')
+    plt.legend()
+    plt.title("ARIMA Stock Price Prediction")
+    plt.show()
+
+    x_prev = data_x_test[name]["close"][width-1:-2]
+    y_inc = (y_test.reset_index(drop=True) - x_prev.reset_index(drop=True)) / x_prev.reset_index(drop=True)
+    pred_inc = (np.array(forecast).reshape(-1) - x_prev.reset_index(drop=True)) / x_prev.reset_index(drop=True)
+    mae = mean_absolute_error(y_inc, pred_inc)
+    print(f"Mean Absolute Error on returns: {mae}")
+
+    acc = count_acc_pred(pred_inc, y_inc)
+    print(f"Accuracy: {acc}")
+    accuracy.append(acc)
+    print()
 
 
-# Auto-select (p, d, q)
-# auto_model = auto_arima(train, seasonal=False, stepwise=True, trace=True)
-# print(auto_model.summary())
+print(f"Total accuracy: {np.mean(accuracy)}")
+# 0.5070486591590601
 
-# # Use the suggested (p, d, q) values
-# model = ARIMA(train, order=auto_model.order)
-# model_fit = model.fit()

@@ -202,7 +202,7 @@ print(reduction)
 
 #%% evaluate models on all the sets
 
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import mean_squared_error, r2_score, roc_auc_score, roc_curve
 
 def evaluate_model(model, x_test_list, y_test_list):
     res = {}
@@ -335,6 +335,20 @@ def plot_cat(model, x, y):
         plt.legend()
         plt.grid(True)
         plt.show()
+        
+def plot_roc_curve(y_true, y_scores):
+    fpr, tpr, _ = roc_curve(y_true, y_scores)
+    plt.figure(figsize=(8, 6))
+    plt.plot(fpr, tpr, color='blue', lw=2)
+    plt.plot([0, 1], [0, 1], color='gray', linestyle='--')  # Diagonal line (random model)
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate (FPR)')
+    plt.ylabel('True Positive Rate (TPR)')
+    plt.title('Receiver Operating Characteristic (ROC) Curve')
+    plt.legend(loc='lower right')
+    plt.grid()
+    plt.show()
 
 #%% linear regression
 
@@ -354,17 +368,17 @@ print(f"R-squared: {r2}")
 
 # cat test
 
-close_4 = df_test.close_4
+# close_4 = df_test.close_4
 
-y_cat = y_test.y - close_4
-y_cat[y_cat >= 0] = 1
-y_cat[y_cat < 0] = 0
+# y_cat = y_test.y - close_4
+# y_cat[y_cat >= 0] = 1
+# y_cat[y_cat < 0] = 0
 
-pred_cat = y_pred.reshape(-1,) - close_4
-pred_cat[pred_cat >= 0] = 1
-pred_cat[pred_cat < 0] = 0
+# pred_cat = y_pred.reshape(-1,) - close_4
+# pred_cat[pred_cat >= 0] = 1
+# pred_cat[pred_cat < 0] = 0
 
-1 - mean_squared_error(y_cat, pred_cat)
+# 1 - mean_squared_error(y_cat, pred_cat)
 # Out[13]: 0.5051381593971227
 
 ### cat
@@ -473,6 +487,11 @@ r2 = r2_score(y_test, y_pred)
 print(f"Mean Squared Error: {mse}")
 print(f"R-squared: {r2}")
 
+feature_importances = np.abs(model.coef_)
+importance_df = pd.DataFrame({'Feature': df_train.columns, 'Importance': feature_importances})
+importance_df = importance_df.sort_values(by='Importance', ascending=False)
+importance_df[:20]
+
 ### cat
 
 y_cat = categorize_y(df_test, y_test.y)
@@ -482,6 +501,10 @@ mse = mean_squared_error(y_cat, pred_cat)
 r2 = r2_score(y_cat, pred_cat)
 print(f"Accuracy: {1 - mse}") # Accuracy: 0.5428179949760219
 print(f"R-squared: {r2}")
+
+auc_score = roc_auc_score(y_cat, y_pred)
+print(f'ROC AUC Score: {auc_score:.4f}')
+plot_roc_curve(y_cat, y_pred)
 
 plot_cat(model, df_test, y_test)
 evaluate_model_on_cat(model, df_test, y_test)
@@ -560,6 +583,10 @@ mse = mean_squared_error(y_cat, pred_cat)
 r2 = r2_score(y_cat, pred_cat)
 print(f"Accuracy: {1 - mse}") # Accuracy: 0.5396209180178123
 print(f"R-squared: {r2}")
+
+auc_score = roc_auc_score(y_cat, y_pred)
+print(f'ROC AUC Score: {auc_score:.4f}')
+plot_roc_curve(y_cat, y_pred)
 
 plot_cat(model, df_test, y_test)
 evaluate_model_on_cat(model, df_test, y_test)
@@ -667,8 +694,10 @@ name = "AAPL"
 plot_all_prediction(name, model, x_test_list, y_test_list)
 plot_prediction_by_names(model, x_test_list, y_test_list)
 
-non_zero_features = df_train.columns[model.coef_ != 0]
-print(non_zero_features)
+feature_importances = model.feature_importances_
+importance_df = pd.DataFrame({'Feature': df_train.columns, 'Importance': feature_importances})
+importance_df = importance_df.sort_values(by='Importance', ascending=False)
+importance_df[:20]
 
 joblib.dump(model, "models/random_forest_model.pkl")
 model = joblib.load("models/random_forest_model.pkl")
@@ -682,6 +711,10 @@ mse = mean_squared_error(y_cat, pred_cat)
 r2 = r2_score(y_cat, pred_cat)
 print(f"Accuracy: {1 - mse}") # Accuracy: 0.5316282256222882
 print(f"R-squared: {r2}")
+
+auc_score = roc_auc_score(y_cat, y_pred)
+print(f'ROC AUC Score: {auc_score:.4f}')
+plot_roc_curve(y_cat, y_pred)
 
 plot_cat(model, df_test, y_test)
 evaluate_model_on_cat(model, df_test, y_test)
@@ -733,6 +766,10 @@ mse = mean_squared_error(y_cat, pred_cat)
 r2 = r2_score(y_cat, pred_cat)
 print(f"Accuracy: {1 - mse}") # 0.5218086321077872
 print(f"R-squared: {r2}")
+
+auc_score = roc_auc_score(y_cat, y_pred)
+print(f'ROC AUC Score: {auc_score:.4f}')
+plot_roc_curve(y_cat, y_pred)
 
 plot_cat(model, df_test, y_test)
 evaluate_model_on_cat(model, df_test, y_test)
@@ -843,6 +880,10 @@ r2 = r2_score(y_cat, pred_cat)
 print(f"Accuracy: {1 - mse}") # Accuracy: 0.5355103905001142
 print(f"R-squared: {r2}")
 
+auc_score = roc_auc_score(y_cat, y_pred)
+print(f'ROC AUC Score: {auc_score:.4f}')
+plot_roc_curve(y_cat, y_pred)
+
 plot_cat(model, df_test, y_test)
 evaluate_model_on_cat(model, df_test, y_test)
 
@@ -899,6 +940,10 @@ mse = mean_squared_error(y_cat, pred_cat)
 r2 = r2_score(y_cat, pred_cat)
 print(f"Accuracy: {1 - mse}") # Accuracy: 0.5313998629824161
 print(f"R-squared: {r2}")
+
+auc_score = roc_auc_score(y_cat, y_pred)
+print(f'ROC AUC Score: {auc_score:.4f}')
+plot_roc_curve(y_cat, y_pred)
 
 plot_cat(model, df_test, y_test)
 evaluate_model_on_cat(model, df_test, y_test)
@@ -998,6 +1043,10 @@ mse = mean_squared_error(y_cat, pred_cat)
 r2 = r2_score(y_cat, pred_cat)
 print(f"Accuracy: {1 - mse}") # Accuracy: 0.5295729618634392
 print(f"R-squared: {r2}")
+
+auc_score = roc_auc_score(y_cat, y_pred)
+print(f'ROC AUC Score: {auc_score:.4f}')
+plot_roc_curve(y_cat, y_pred)
 
 plot_cat(model, df_test, y_test)
 evaluate_model_on_cat(model, df_test, y_test)
