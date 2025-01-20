@@ -171,7 +171,7 @@ model.apply(init_weights)
 
 criterion = nn.MSELoss()
 
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
 
 #%%
@@ -218,7 +218,7 @@ for epoch in range(EPOCHS):
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         torch.save(model.state_dict(), save_path)
-        print(f"✅ Model saved at epoch {epoch+1} with val loss: {val_loss:.4f}")
+        print(f"Model saved at epoch {epoch+1} with val loss: {val_loss:.4f}")
     
 #%%
 

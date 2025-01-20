@@ -478,14 +478,14 @@ def pipeline():
     df_val = standardize_columns(df_val, scalers, COLUMNS_TO_STANDARDIZE, GROUP_BY_COLUMN)
     df_test = standardize_columns(df_test, scalers, COLUMNS_TO_STANDARDIZE, GROUP_BY_COLUMN)
     
+    print("Zapisywanie obiektów skalujących")
+    save_object(scalers, SCALERS_PATH)
+    
     # TODO add arima
     print("Wykorzystanie ARIMA")
     df_train = add_arima_prediction(df_train, GROUP_BY_COLUMN, width=SCHEMA_WIDTH)
     df_val = add_arima_prediction(df_val, GROUP_BY_COLUMN, width=SCHEMA_WIDTH)
     df_test = add_arima_prediction(df_test, GROUP_BY_COLUMN, width=SCHEMA_WIDTH)
-    
-    print("Zapisywanie obiektów skalujących")
-    save_object(scalers, SCALERS_PATH)
     
     # TODO technical analysis indicators
     print("Dodawanie wskaźników analizy techniczej")

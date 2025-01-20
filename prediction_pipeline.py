@@ -68,10 +68,29 @@ def prepare_data_for_prediction(df, name):
         raise Exception("Not enough data")
     df = df.tail(dp.TIME_SERIES_LENGTH + dp.SCHEMA_WIDTH - 1).reset_index(drop=True)
     
+    # TODO
+    print("Wyliczanie wykładnika Hursta")
+    df = dp.add_hurst_dim_columns(df, dp.GROUP_BY_COLUMN, dp.HURST_WIDTH)
+    
     print("Standaryzacja kolumn")
     scalers = dp.load_object(dp.SCALERS_PATH)
     df.volume = df.volume.astype(float)
     df = dp.standardize_columns(df, scalers, dp.COLUMNS_TO_STANDARDIZE, dp.GROUP_BY_COLUMN)
+    
+    # TODO add arima
+    print("Wykorzystanie ARIMA")
+    df = dp.add_arima_prediction(df, dp.GROUP_BY_COLUMN, width=dp.SCHEMA_WIDTH)
+    
+    # TODO technical analysis indicators
+    print("Dodawanie wskaźników analizy techniczej")
+    df = dp.add_technical_analysis_columns(df, dp.GROUP_BY_COLUMN, prefix=dp.TECHNICAL_ANALYSIS_PREFIX)
+    # TODO scaling
+    print("Standaryzacja kolumn analizy technicznej")
+    technical_analysis_columns = [col for col in df.columns if col.startswith(dp.TECHNICAL_ANALYSIS_PREFIX)]
+    technical_analysis_scalers = dp.load_object(dp.TECHNICAL_SCALERS_PATH)
+    df = dp.standardize_columns(df, technical_analysis_scalers, technical_analysis_columns, dp.GROUP_BY_COLUMN)
+    
+    
     
     print("Dodawanie cech fraktalnych o zmiennej długości")
     df = dp.add_fractal_long_schemas(df, dp.LONG_SCHEMA_PATH, dp.GROUP_BY_COLUMN, dp.LONG_SCHEMA_PREFIX, dp.SCHEMA_WIDTH)
@@ -94,14 +113,17 @@ def prepare_data_for_prediction(df, name):
     columns_to_shift = [col for col in df.columns if not col.startswith("name")]
     output_vector = create_time_series_vector(df, columns_to_shift, dp.TIME_SERIES_LENGTH)
     
-    columns_to_drop = ["name"]
+    # TODO remove year columns
+    year_columns = ["date_year"] + [f"date_year_{i}" for i in range(1, dp.TIME_SERIES_LENGTH)]
+    columns_to_drop = ["name"] + year_columns
     print("Usuwanie kolumny z nazwą")
     output_vector = output_vector.drop(columns=columns_to_drop)
     return output_vector
 
-def merge_vector_with_pred_date(x_vector, date):
+def merge_vector_with_pred_date(x_vector, date, remove_year=True):
     y_date = create_prediction_date_vector(date)
     result = pd.concat([x_vector, y_date], axis=1)
+    result = result.drop(columns=["date_year_y"])
     return result
 
 def download_and_prepare_data(name):
@@ -158,6 +180,8 @@ def main():
     df = dp.load_data_from_file(path)
     x = prepare_data_for_prediction(df, name)
     x = merge_vector_with_pred_date(x, date)
+    y = predict_value(x, name, pred_name="close")
+    
     
 if __name__ == "__main__":
     main()
