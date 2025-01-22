@@ -275,8 +275,8 @@ def plot_prediction(name, model, x, y):
     y_pred = model.predict(x)
     pred_name = y_pred[name_index]
     plt.figure(figsize=(10, 6))
-    plt.scatter(name_index, y_name, alpha=0.7, label='original', color='blue')
-    plt.scatter(name_index, pred_name, label='pred', alpha=0.7, color='orange')
+    plt.scatter(name_index, y_name, alpha=0.7, label='original', color='blue', s=8)
+    plt.scatter(name_index, pred_name, label='pred', alpha=0.7, color='orange', s=8)
     plt.title(f'{name} close price prediction', fontsize=16)
     plt.xlabel('index', fontsize=12)
     plt.ylabel('close price', fontsize=12)

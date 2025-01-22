@@ -31,6 +31,12 @@ def y_to_increments(x, y, pred_name="close"):
     res = (y - last_data) / last_data
     return res
 
+def inc_to_original(x, inc, pred_name="close"):
+    last_column_name = [col for col in x.columns if col.startswith(pred_name)][-1]
+    last_data = x[last_column_name]
+    y = inc * last_data + last_data
+    return y
+
 #%% reading data (y as returns)
 
 import pandas as pd
@@ -102,6 +108,26 @@ def plot_prediction(models, x_set, y_set, names):
         x = x_set[name]
         y = y_set[name]
         pred = model.predict(x)
+        plt.figure(figsize=(10, 6))
+        plt.scatter(y.index, y, alpha=0.7, label='original', color='blue', s=8)
+        plt.scatter(y.index, pred, label='pred', alpha=0.7, color='orange', s=8)
+        plt.title(f'{name} close price prediction', fontsize=16)
+        plt.xlabel('index', fontsize=12)
+        plt.ylabel('close price', fontsize=12)
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+        
+def plot_prediction_close(models, x_set, y_set, names):
+    for name in names:
+        model = models[name]
+        x = x_set[name]
+        y = y_set[name]
+        pred = model.predict(x)
+        
+        pred = inc_to_original(x, pred)
+        y = inc_to_original(x, y)
+        
         plt.figure(figsize=(10, 6))
         plt.scatter(y.index, y, alpha=0.7, label='original', color='blue', s=8)
         plt.scatter(y.index, pred, label='pred', alpha=0.7, color='orange', s=8)
@@ -325,5 +351,7 @@ plt.legend(loc='lower right')
 plt.grid()
 plt.show()
 
+#%%
 
+plot_prediction_close(models, data_x_test, data_y_test, names)
 

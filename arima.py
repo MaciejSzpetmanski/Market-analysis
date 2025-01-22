@@ -128,6 +128,17 @@ def plot_prediction(models, x_set, y_set, names):
         plt.legend()
         plt.grid(True)
         plt.show()
+        
+def make_plot(y, pred):
+    plt.figure(figsize=(10, 6))
+    plt.scatter(y.index, y, alpha=0.7, label='original', color='blue', s=8)
+    plt.scatter(y.index, pred, label='pred', alpha=0.7, color='orange', s=8)
+    plt.title(f'{name} close price prediction', fontsize=16)
+    plt.xlabel('index', fontsize=12)
+    plt.ylabel('close price', fontsize=12)
+    plt.legend()
+    plt.grid(True)
+    plt.show()
 
 #%%
 
@@ -205,6 +216,8 @@ for name in names:
     
     mae = mean_absolute_error(y_test, forecast)
     print(f"Mean Absolute Error: {mae}")
+    
+    make_plot(y_test, forecast)
     
     # Plot the results
     plt.figure(figsize=(10,5))

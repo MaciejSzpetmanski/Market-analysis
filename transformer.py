@@ -25,6 +25,12 @@ def y_to_increments(x, y, pred_name="close"):
     res = (y - last_data) / last_data
     return res
 
+def inc_to_original(x, inc, pred_name="close"):
+    last_column_name = [col for col in x.columns if col.startswith(pred_name)][-1]
+    last_data = x[last_column_name]
+    y = inc * last_data + last_data
+    return y
+
 #%% reading data (y as returns)
 
 import pandas as pd
@@ -136,6 +142,29 @@ def plot_prediction2(model, x, y, x_set):
         
         plt.figure(figsize=(10, 6))
         # plt.scatter(name_index, y_name, alpha=0.7, label='original', color='blue', s=8)
+        plt.scatter(name_index, pred_name, label='pred', alpha=0.7, color='orange', s=8)
+        plt.title(f'{name} close price prediction', fontsize=16)
+        plt.xlabel('index', fontsize=12)
+        plt.ylabel('close price', fontsize=12)
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+        
+def plot_prediction_close(model, x, y, x_set):
+    y_pred = model(x).detach().numpy()
+    y_pred = y_pred.reshape(-1)
+    y_pred = inc_to_original(x_set, y_pred)
+    y = inc_to_original(x_set, y)
+    
+    name_columns = [col for col in x_set.columns if col.startswith("name")]
+    for col in name_columns:
+        name = col.lstrip("name_")
+        name_index = x_set[x_set[f"name_{name}"] == 1].index
+        pred_name = y_pred[name_index]
+        y_name = y[name_index]
+        
+        plt.figure(figsize=(10, 6))
+        plt.scatter(name_index, y_name, alpha=0.7, label='original', color='blue', s=8)
         plt.scatter(name_index, pred_name, label='pred', alpha=0.7, color='orange', s=8)
         plt.title(f'{name} close price prediction', fontsize=16)
         plt.xlabel('index', fontsize=12)
@@ -271,3 +300,5 @@ evaluate_model_acc(model, X_test, y_test, df_test)
 
 plot_prediction(model, X_test, y_test, df_test)
 plot_prediction2(model, X_test, y_test, df_test)
+plot_prediction_close(model, X_test, y_test, df_test)
+
