@@ -699,7 +699,7 @@ importance_df = pd.DataFrame({'Feature': df_train.columns, 'Importance': feature
 importance_df = importance_df.sort_values(by='Importance', ascending=False)
 importance_df[:20]
 
-joblib.dump(model, "models/random_forest_model.pkl")
+joblib.dump(model, "models/random_forest_model.pkl", compress=3)
 model = joblib.load("models/random_forest_model.pkl")
 
 ### cat

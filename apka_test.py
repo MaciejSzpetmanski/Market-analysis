@@ -28,6 +28,8 @@ class StockPredictionApp(tk.Tk):
         self.df = None
         self.pred_date = None
         self.freshLoaded = False
+        self.models, self.are_on_close = pp.load_models()
+        
 
         # -------- Główne ramki (layout) -----------
         main_frame = ttk.Frame(self)
@@ -253,9 +255,13 @@ class StockPredictionApp(tk.Tk):
         name = self.instrument_var.get()
         if self.freshLoaded:
             try:
-                x = pp.prepare_data_for_prediction(self.df, name)
-                x = pp.merge_vector_with_pred_date(x, self.pred_date)
-                predicted_value = pp.predict_value(x, name)[0]
+                # w przypadku, gdy chcemy podpiąć stare modele, ustawić use_arima=False
+                # x = pp.prepare_data_for_prediction(self.df, name)
+                x = pp.prepare_data(self.models, self.are_on_close, self.df, name, self.pred_date)
+                # x = pp.merge_vector_with_pred_date(x, self.pred_date)
+                # predicted_value = pp.predict_value_old(x, name)[0]
+                predicted_value = pp.predict_value(self.models, self.are_on_close, x, name)[0]
+                print(predicted_value)
                 self.freshLoaded = False
             except Exception as e:
                 messagebox.showerror("Błąd", str(e))
@@ -280,6 +286,8 @@ class StockPredictionApp(tk.Tk):
     # def mock_predict(self):
     #     # TODO attach model
     #     return random.uniform(100, 300)
+    
+    # TODO XOM nn
 
 
 def main():

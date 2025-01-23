@@ -226,7 +226,6 @@ class TransformerModel(nn.Module):
         return out
 
 model = TransformerModel(input_dim=len(df_train.columns), d_model=64, nhead=8, num_layers=4, dim_feedforward=128).to(device)
-# model = TransformerModel(input_dim=len(df_train.columns), d_model=128, nhead=8, num_layers=6, dim_feedforward=256).to(device)
 
 def init_weights(m):
     if isinstance(m, nn.Linear):
