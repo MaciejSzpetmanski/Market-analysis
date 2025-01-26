@@ -1,15 +1,20 @@
-#%% working directory
+#%% packages
 
 import os
-import joblib
-
-path = "D:\Studia\semestr7\inźynierka\Market-analysis"
-# path = "C:\Studia\Market-analysis"
-os.chdir(path)
+import pandas as pd
+from sklearn.metrics import mean_squared_error, r2_score
+import matplotlib.pyplot as plt
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader, TensorDataset
 
 #%% categorize y
 
 def categorize_y(x, y, pred_name="close"):
+    """
+    Assumes x is a Data Frame and y is target column with close values.
+    Returns categorized target column.
+    """
     last_column_name = [col for col in x.columns if col.startswith(pred_name)][-1]
     last_data = x[last_column_name]
     res = y - last_data
@@ -20,12 +25,20 @@ def categorize_y(x, y, pred_name="close"):
 #%%  y to increments
 
 def y_to_increments(x, y, pred_name="close"):
+    """
+    Assumes x is a Data Frame and y is target column with close values.
+    Returns target column as relative gain.
+    """
     last_column_name = [col for col in x.columns if col.startswith(pred_name)][-1]
     last_data = x[last_column_name]
     res = (y - last_data) / last_data
     return res
 
 def inc_to_original(x, inc, pred_name="close"):
+    """
+    Assumes x is a Data Frame and y is target column with relative gain values.
+    Returns target column as close prices.
+    """
     last_column_name = [col for col in x.columns if col.startswith(pred_name)][-1]
     last_data = x[last_column_name]
     y = inc * last_data + last_data
@@ -33,10 +46,12 @@ def inc_to_original(x, inc, pred_name="close"):
 
 #%% reading data (y as returns)
 
-import pandas as pd
-import numpy as np
-
 def load_dataset(directory_name, name, target_horizon):
+    """
+    Loads a CSV file of specified instrument from given directory to a Data Frame
+    with given target horizon to predict.
+    
+    """
     df_file_path = os.path.join(directory_name, f"df_{name}_{target_horizon}.csv")
     y_file_path = os.path.join(directory_name, f"y_{name}_{target_horizon}.csv")
     if os.path.isfile(df_file_path) and os.path.isfile(y_file_path):
@@ -56,9 +71,11 @@ y_test = y_to_increments(df_test, y_test.y)
 
 #%% evaluation
 
-from sklearn.metrics import mean_squared_error, r2_score
-
 def count_acc(model, x, y):
+    """
+    Assumes x is a Data Frame and y is target column with relative gain values.
+    Returns accuracy based on given model prediction.
+    """
     y_pred = model(x).detach().numpy()
     
     y_inc = y.copy()
@@ -106,8 +123,6 @@ def evaluate_model_acc(model, x, y, x_set):
 
 #%% plot prediction
 
-import matplotlib.pyplot as plt
-
 def plot_prediction(model, x, y, x_set):
     y_pred = model(x).detach().numpy()
     name_columns = [col for col in x_set.columns if col.startswith("name")]
@@ -137,11 +152,9 @@ def plot_prediction2(model, x, y, x_set):
         name = col.lstrip("name_")
         name_index = x_set[x_set[f"name_{name}"] == 1].index
         
-        # y_name = y[name_index]
         pred_name = y_pred[name_index]
         
         plt.figure(figsize=(10, 6))
-        # plt.scatter(name_index, y_name, alpha=0.7, label='original', color='blue', s=8)
         plt.scatter(name_index, pred_name, label='pred', alpha=0.7, color='orange', s=8)
         plt.title(f'{name} close price prediction', fontsize=16)
         plt.xlabel('index', fontsize=12)
@@ -175,15 +188,13 @@ def plot_prediction_close(model, x, y, x_set):
         
 #%% model
 
-import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader, TensorDataset
-
+# select available device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
 BATCH_SIZE = 64
 
+# prepare data for model
 X_train = torch.tensor(df_train.values, dtype=torch.float32)
 Y_train = torch.tensor(y_train.values, dtype=torch.float32)
 train_dataset = TensorDataset(X_train, Y_train)
@@ -201,6 +212,7 @@ test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True)
 
 #%%
 
+# model definition
 class TransformerModel(nn.Module):
     def __init__(self, input_dim, d_model, nhead, num_layers, dim_feedforward):
         super(TransformerModel, self).__init__()
@@ -227,6 +239,7 @@ class TransformerModel(nn.Module):
 
 model = TransformerModel(input_dim=len(df_train.columns), d_model=64, nhead=8, num_layers=4, dim_feedforward=128).to(device)
 
+# initialize weights using Xavier method
 def init_weights(m):
     if isinstance(m, nn.Linear):
         nn.init.xavier_uniform_(m.weight)
@@ -240,7 +253,7 @@ criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
 
-#%%
+#%% training model
 
 best_val_loss = float('inf')
 save_path = "models/transformers/best_model.pth"
@@ -279,15 +292,16 @@ for epoch in range(EPOCHS):
 
     val_loss /= len(val_loader)
 
-    print(f"Epoch {epoch+1}/{EPOCHS} - Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
+    print(f"Epoch {epoch+1}/{EPOCHS} - train Loss: {train_loss}, val Loss: {val_loss}")
 
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         torch.save(model.state_dict(), save_path)
-        print(f"Model saved at epoch {epoch+1} with val loss: {val_loss:.4f}")
+        print(f"Model saved at epoch {epoch+1} with val loss: {val_loss}")
     
-#%%
+#%% loading and testing model
 
+save_path = "models/transformers/best_model.pth"
 model = TransformerModel(input_dim=len(df_train.columns), d_model=64, nhead=8, num_layers=4, dim_feedforward=128)
 model.load_state_dict(torch.load(save_path))
 model.eval()

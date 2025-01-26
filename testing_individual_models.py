@@ -1,11 +1,15 @@
-#%% working directory
+#%% packages
 
 import os
 import joblib
-
-path = "D:\Studia\semestr7\inźynierka\Market-analysis"
-# path = "C:\Studia\Market-analysis"
-os.chdir(path)
+import pandas as pd
+import numpy as np
+from sklearn.metrics import mean_squared_error
+from sklearn.linear_model import ElasticNet
+from sklearn.ensemble import RandomForestRegressor
+import xgboost as xgb
+from sklearn.ensemble import BaggingRegressor
+from sklearn.tree import DecisionTreeRegressor
 
 #%% categorize y
 
@@ -38,9 +42,6 @@ def inc_to_original(x, inc, pred_name="close"):
     return y
 
 #%% reading data (y as returns)
-
-import pandas as pd
-import numpy as np
 
 def load_dataset(directory_name, name, target_horizon):
     df_file_path = os.path.join(directory_name, f"df_{name}_{target_horizon}.csv")
@@ -80,8 +81,6 @@ data_x_val, data_y_val = split_data(df_val, y_val, name_columns)
 data_x_test, data_y_test = split_data(df_test, y_test, name_columns)
 
 #%% evaluation
-
-from sklearn.metrics import mean_squared_error, r2_score
 
 def count_acc(model, x, y):
     y_pred = model.predict(x)
@@ -138,13 +137,7 @@ def plot_prediction_close(models, x_set, y_set, names):
         plt.grid(True)
         plt.show()
 
-#%%
-
-from sklearn.linear_model import ElasticNet
-from sklearn.ensemble import RandomForestRegressor
-import xgboost as xgb
-from sklearn.ensemble import BaggingRegressor
-from sklearn.tree import DecisionTreeRegressor
+#%% training definition
 
 def tune_ElasticNet(df_train, y_train, df_val, y_val, alphas, l1_ratios, random_state=42):
     best_mse = float('inf')
@@ -304,10 +297,6 @@ models = {}
 for name in names:
     models[name] = joblib.load(f"models/individual/{name}.pkl")
 
-mean_mse = np.mean([value["mse"] for key, value in history.items()])
-
-[value["mse"] / np.std(y_val) for value, y_val in zip(history.values(), data_y_val.values())]
-
 cum_acc = 0
 for name in names:
     print(name)
@@ -319,39 +308,6 @@ print(cum_acc)
         
 plot_prediction(models, data_x_test, data_y_test, names)
 
-#%%
-
-from sklearn.metrics import roc_auc_score, roc_curve
-
-y_true = []
-y_scores = []
-
-for name in names:
-    model, x, y = models[name], data_x_test[name], data_y_test[name]
-    y_true.append(categorize_y_from_inc(y))
-    pred = model.predict(x)
-    y_scores.append(pred)
-
-y_true = np.concatenate(y_true)
-y_scores = np.concatenate(y_scores)
-
-auc_score = roc_auc_score(y_true, y_scores)
-print(f'ROC AUC Score: {auc_score:.4f}')
-
-fpr, tpr, _ = roc_curve(y_true, y_scores)
-plt.figure(figsize=(8, 6))
-plt.plot(fpr, tpr, color='blue', lw=2)
-plt.plot([0, 1], [0, 1], color='gray', linestyle='--')  # Diagonal line (random model)
-plt.xlim([0.0, 1.0])
-plt.ylim([0.0, 1.05])
-plt.xlabel('False Positive Rate (FPR)')
-plt.ylabel('True Positive Rate (TPR)')
-plt.title('Receiver Operating Characteristic (ROC) Curve')
-plt.legend(loc='lower right')
-plt.grid()
-plt.show()
-
-#%%
-
+# visualise close prediction
 plot_prediction_close(models, data_x_test, data_y_test, names)
 

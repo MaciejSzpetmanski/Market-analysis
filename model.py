@@ -1,13 +1,13 @@
-#%% working directory
+#%% packages
+
+# analyzing linear regression model for different target horizons
 
 import os
 import joblib
 import pandas as pd
-import numpy as np
-
-path = "D:\Studia\semestr7\inźynierka\Market-analysis"
-# path = "C:\Studia\Market-analysis"
-os.chdir(path)
+from sklearn.metrics import mean_squared_error, r2_score
+import matplotlib.pyplot as plt
+from sklearn.linear_model import ElasticNet
 
 #%% reading data
 
@@ -53,8 +53,6 @@ y_test_list = [y_test_1, y_test_2, y_test_3, y_test_4, y_test_5]
 
 #%% evaluate models on all the sets
 
-from sklearn.metrics import mean_squared_error, r2_score
-
 def evaluate_model(model, x_test_list, y_test_list):
     res = {}
     for i in range(len(x_test_list)):
@@ -86,8 +84,6 @@ def print_eval_results(eval_results):
         
 #%% plot results for one name
 
-import matplotlib.pyplot as plt
-
 def plot_prediction(name, model, x, y):
     name_index = x[x[f"name_{name}"] == 1].index
     y_name = y.iloc[name_index]
@@ -115,11 +111,6 @@ def plot_prediction_by_names(model, x_test_list, y_test_list):
         name = col.lstrip("name_")
         plot_all_prediction(name, model, x_test_list, y_test_list)
 
-#%% ElasticNet
-
-from sklearn.linear_model import ElasticNet
-from sklearn.metrics import mean_squared_error, r2_score
-
 #%% k=1
 
 model1 = ElasticNet(alpha=0.003, l1_ratio=0.8, random_state=42)
@@ -130,10 +121,9 @@ y_pred1 = model1.predict(df_test_1)
 mse1 = mean_squared_error(y_test_1, y_pred1)
 r2_1 = r2_score(y_test_1, y_pred1)
 
-print(f"Mean Squared Error: {mse1}")
-print(f"R-squared: {r2_1}")
+print(f"MSE: {mse1}")
+print(f"R2: {r2_1}")
 
-# print("Coefficients:", model1.coef_)
 print("Intercept:", model1.intercept_)
 
 eval_results_1 = evaluate_model(model1, x_test_list, y_test_list)
@@ -148,7 +138,7 @@ print(non_zero_features_1)
 
 for name, coef in zip(df_train_1.columns, model1.coef_):
     if coef != 0:
-        print(f"{name}: {coef:.4f}")
+        print(f"{name}: {coef}")
         
 joblib.dump(model1, "models/elasticnet_model_1.pkl")
 model1 = joblib.load("models/elasticnet_model_1.pkl")
@@ -163,10 +153,9 @@ y_pred2 = model2.predict(df_test_2)
 mse2 = mean_squared_error(y_test_2, y_pred2)
 r2_2 = r2_score(y_test_2, y_pred2)
 
-print(f"Mean Squared Error: {mse2}")
-print(f"R-squared: {r2_2}")
+print(f"MSE: {mse2}")
+print(f"R2: {r2_2}")
 
-# print("Coefficients:", model2.coef_)
 print("Intercept:", model2.intercept_)
 
 eval_results_2 = evaluate_model(model2, x_test_list, y_test_list)
@@ -181,7 +170,7 @@ print(non_zero_features_2)
 
 for name, coef in zip(df_train_2.columns, model2.coef_):
     if coef != 0:
-        print(f"{name}: {coef:.4f}")
+        print(f"{name}: {coef}")
         
 joblib.dump(model2, "models/elasticnet_model_2.pkl")
 model2 = joblib.load("models/elasticnet_model_2.pkl")
@@ -191,12 +180,6 @@ model2 = joblib.load("models/elasticnet_model_2.pkl")
 
 model5 = ElasticNet(alpha=0.003, l1_ratio=0.8, random_state=42)
 
-# from sklearn.linear_model import LinearRegression
-# model5 = LinearRegression()
-
-# from sklearn.ensemble import RandomForestRegressor
-# model5 = RandomForestRegressor(n_estimators=100, random_state=42, max_depth=10, n_jobs=-1)
-
 model5.fit(df_train_5, y_train_5)
 
 y_pred5 = model5.predict(df_test_5)
@@ -204,10 +187,9 @@ y_pred5 = model5.predict(df_test_5)
 mse5 = mean_squared_error(y_test_5, y_pred5)
 r2_5 = r2_score(y_test_5, y_pred5)
 
-print(f"Mean Squared Error: {mse5}")
-print(f"R-squared: {r2_5}")
+print(f"MSE: {mse5}")
+print(f"R2: {r2_5}")
 
-# print("Coefficients:", model5.coef_)
 print("Intercept:", model5.intercept_)
 
 eval_results_5 = evaluate_model(model5, x_test_list, y_test_list)
@@ -222,7 +204,7 @@ print(non_zero_features_5)
 
 for name, coef in zip(df_train_5.columns, model5.coef_):
     if coef != 0:
-        print(f"{name}: {coef:.4f}")
+        print(f"{name}: {coef}")
         
 joblib.dump(model5, "models/elasticnet_model_5.pkl")
 model5 = joblib.load("models/elasticnet_model_5.pkl")

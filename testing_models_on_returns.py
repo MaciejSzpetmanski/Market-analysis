@@ -1,11 +1,9 @@
-#%% working directory
+#%% packages
 
 import os
-import joblib
-
-path = "D:\Studia\semestr7\inźynierka\Market-analysis"
-# path = "C:\Studia\Market-analysis"
-os.chdir(path)
+import pandas as pd
+import numpy as np
+from sklearn.metrics import mean_squared_error, r2_score
 
 #%% categorize y
 
@@ -27,9 +25,6 @@ def y_to_increments(x, y, pred_name="close"):
 
 #%% reading data (y as returns)
 
-import pandas as pd
-import numpy as np
-
 def load_dataset(directory_name, name, target_horizon):
     df_file_path = os.path.join(directory_name, f"df_{name}_{target_horizon}.csv")
     y_file_path = os.path.join(directory_name, f"y_{name}_{target_horizon}.csv")
@@ -49,8 +44,6 @@ y_val = y_to_increments(df_val, y_val.y)
 y_test = y_to_increments(df_test, y_test.y)
 
 #%% evaluation
-
-from sklearn.metrics import mean_squared_error, r2_score
 
 def evaluate_model_on_inc(model, x, y):
     y_pred = model.predict(x)
@@ -163,7 +156,7 @@ y_pred = model.predict(df_test)
 
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
-print(f"Mean Squared Error: {mse}") # Mean Squared Error: 312.52001781262425
+print(f"Mean Squared Error: {mse}")
 print(f"R-squared: {r2}")
 
 evaluate_model_on_inc(model, df_test, y_test)
@@ -173,14 +166,10 @@ evaluate_model_on_cat(model, df_test, y_test)
 plot_cat(model, df_test, y_test)
 
 count_acc(model, df_test, y_test)
-# Out[42]: 0.5302580497830556
 
 #%% parameters for ElasticNet mse
 
 from sklearn.linear_model import ElasticNet
-
-# alphas = [0.01, 0.1, 1, 10]
-# l1_ratios = [0.2, 0.5, 0.8]
 
 alphas = [3, 5, 8, 10, 11, 12]
 l1_ratios = [0.5, 0.8, 0.9]
@@ -205,15 +194,6 @@ for alpha in alphas:
 print("Best Parameters:", best_params)
 print("Best Validation MSE:", best_val_mse)
 
-# Best Parameters: {'alpha': 10, 'l1_ratio': 0.8}
-# Best Validation MSE: 0.19501009382567275
-
-# Best Parameters: {'alpha': 12, 'l1_ratio': 0.9}
-# Best Validation MSE: 0.18636560843446726
-
-# latest
-# Best Parameters: {'alpha': 3, 'l1_ratio': 0.8}
-
 #%% tuned ElasticNet
 
 model = ElasticNet(alpha=3, l1_ratio=0.8, random_state=42)
@@ -222,7 +202,7 @@ y_pred = model.predict(df_test)
 
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
-print(f"Mean Squared Error: {mse}") # Mean Squared Error: 0.5895282951694542
+print(f"Mean Squared Error: {mse}")
 print(f"R-squared: {r2}")
 
 evaluate_model_on_inc(model, df_test, y_test)
@@ -232,7 +212,6 @@ evaluate_model_on_cat(model, df_test, y_test)
 plot_cat(model, df_test, y_test)
 
 count_acc(model, df_test, y_test)
-# Out[89]: 0.5083352363553323
 
 #%% RandomForestRegressor
 
@@ -244,7 +223,7 @@ y_pred = model.predict(df_test)
 
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
-print(f"Mean Squared Error: {mse}") # Mean Squared Error: 59.76548520350765
+print(f"Mean Squared Error: {mse}")
 print(f"R-squared: {r2}")
 
 evaluate_model_on_inc(model, df_test, y_test)
@@ -254,7 +233,6 @@ evaluate_model_on_cat(model, df_test, y_test)
 plot_cat(model, df_test, y_test)
 
 count_acc(model, df_test, y_test)
-# Out[132]: 0.507878511075588
 
 #%% fine-tuning random forest
 
@@ -279,10 +257,6 @@ for n_estimators in n_estimators_list:
             best_model = rf
 
 print(f"\nBest Params: {best_params}, Best Validation MSE: {best_score}")
-# Best Params: {'n_estimators': 100, 'max_depth': None}, Best Validation MSE: 232.47020542259972
-
-# latest
-# Best Params: {'n_estimators': 300, 'max_depth': 10}, Best Validation MSE: 4.738005509956569
 
 #%% tuned RandomForestRegressor
 
@@ -292,7 +266,7 @@ y_pred = model.predict(df_test)
 
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
-print(f"Mean Squared Error: {mse}") # 43.44485977422997
+print(f"Mean Squared Error: {mse}")
 print(f"R-squared: {r2}")
 
 evaluate_model_on_inc(model, df_test, y_test)
@@ -302,7 +276,6 @@ evaluate_model_on_cat(model, df_test, y_test)
 plot_cat(model, df_test, y_test)
 
 count_acc(model, df_test, y_test)
-# Out[141]: 0.4829869833295273
 
 #%% xgboost
 
@@ -314,7 +287,7 @@ y_pred = model.predict(df_test)
 
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
-print(f"Mean Squared Error: {mse}") # Mean Squared Error: 1036.031144445237
+print(f"Mean Squared Error: {mse}")
 print(f"R-squared: {r2}")
 
 evaluate_model_on_inc(model, df_test, y_test)
@@ -324,7 +297,6 @@ evaluate_model_on_cat(model, df_test, y_test)
 plot_cat(model, df_test, y_test)
 
 count_acc(model, df_test, y_test)
-# Out[148]: 0.4818451701301667
 
 #%% xgboost tuning
 
@@ -365,8 +337,6 @@ for n_estimators in [100, 200, 300]:
 
 print(f"\nBest Params: {best_params}")
 print(f"Best Validation MSE: {best_score}")
-# Best Params: {'n_estimators': 100, 'max_depth': 7, 'learning_rate': 0.01, 'alpha': 1, 'gamma': 1}
-# Best Validation MSE: 0.45685116589817804
 
 #%% tuned xgboost
 
@@ -378,7 +348,7 @@ y_pred = model.predict(df_test)
 
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
-print(f"Mean Squared Error: {mse}") # Mean Squared Error: 196.7516975376261
+print(f"Mean Squared Error: {mse}")
 print(f"R-squared: {r2}")
 
 evaluate_model_on_inc(model, df_test, y_test)
@@ -388,7 +358,6 @@ evaluate_model_on_cat(model, df_test, y_test)
 plot_cat(model, df_test, y_test)
 
 count_acc(model, df_test, y_test)
-# Out[156]: 0.5329984014615209
 
 #%% bagging
 
@@ -407,7 +376,7 @@ y_pred = model.predict(df_test)
 
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
-print(f"Mean Squared Error: {mse}") # Mean Squared Error: 37.04021986350858
+print(f"Mean Squared Error: {mse}")
 print(f"R-squared: {r2}")
 
 evaluate_model_on_inc(model, df_test, y_test)
@@ -417,7 +386,6 @@ evaluate_model_on_cat(model, df_test, y_test)
 plot_cat(model, df_test, y_test)
 
 count_acc(model, df_test, y_test)
-# Out[180]: 0.48161680749029456
 
 #%% tuning bagging
 
@@ -456,8 +424,6 @@ for n_estimators in [50, 100, 200]:
 
 print(f"\nBest Params: {best_params}")
 print(f"Best Validation MSE: {best_score}")
-# Best Params: {'n_estimators': 200, 'max_samples': 0.5, 'max_features': 0.5}
-# Best Validation MSE: 102.87165231946987
 
 #%% tuned bagging
 
@@ -479,7 +445,7 @@ y_pred = model.predict(df_test)
 
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
-print(f"Mean Squared Error: {mse}") # Mean Squared Error: 37.04021986350858
+print(f"Mean Squared Error: {mse}")
 print(f"R-squared: {r2}")
 
 evaluate_model_on_inc(model, df_test, y_test)
@@ -489,7 +455,6 @@ evaluate_model_on_cat(model, df_test, y_test)
 plot_cat(model, df_test, y_test)
 
 count_acc(model, df_test, y_test)
-# Out[50]: 0.48161680749029456
 
 #%% NNs
 
@@ -537,7 +502,7 @@ history = model.fit(df_train, y_train,
 y_pred = model.predict(df_test)
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
-print(f"Mean Squared Error: {mse}") # Mean Squared Error: 0.6495904559028964
+print(f"Mean Squared Error: {mse}")
 print(f"R-squared: {r2}")
 
 evaluate_model_on_inc(model, df_test, y_test)
@@ -547,4 +512,3 @@ evaluate_model_on_cat(model, df_test, y_test)
 plot_cat(model, df_test, y_test)
 
 count_acc(model, df_test, y_test)
-# Out[172]: 0.5081068737154602

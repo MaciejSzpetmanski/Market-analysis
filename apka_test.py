@@ -9,7 +9,6 @@ from matplotlib.figure import Figure
 from tkcalendar import DateEntry
 
 import pandas as pd
-import random
 import yfinance as yf
 
 import data_pipeline as dp
@@ -174,20 +173,6 @@ class StockPredictionApp(tk.Tk):
         if not path:
             messagebox.showerror("Błąd", "Nie wybrano pliku CSV.")
             return
-
-        # try:
-        #     csv_data_converter.main()
-        # except Exception as e:
-        #     messagebox.showerror("Błąd", f"Konwersja CSV nie powiodła się:\n{e}")
-        #     return
-
-        # try:
-        #     # TODO use prediction pipeline
-        #     data_pipeline.main()
-        # except Exception as e:
-        #     messagebox.showerror("Błąd", f"Pipeline nie powiódł się:\n{e}")
-        #     return
-
         try:
             self.df = pd.read_csv(path)
             self.update_chart(self.df)
@@ -282,12 +267,6 @@ class StockPredictionApp(tk.Tk):
                 text=f"Przewidywana cena: {predicted_value:.2f}",
                 fg="red"
             )
-
-    # def mock_predict(self):
-    #     # TODO attach model
-    #     return random.uniform(100, 300)
-    
-    # TODO XOM nn
 
 
 def main():

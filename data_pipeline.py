@@ -24,8 +24,7 @@ GROUP_BY_COLUMN = "name"
 LONG_SCHEMA_PATH = "indicators/Schemat zmienna długość"
 LONG_SCHEMA_PREFIX = "long_formation_"
 TECHNICAL_ANALYSIS_PREFIX = "technical"
-# TODO change minimal length according to SCHEMA_WIDTH and TIME_SERIES_LENGTH
-SCHEMA_WIDTH = 20 #5 #30 #5 #3 #10 #20
+SCHEMA_WIDTH = 20
 HURST_WIDTH = 100
 EMA_PERIODS = [10, 20, 50, 100, 200]
 SHORT_SCHEMA_PATH = "indicators/Schemat stała długość"
@@ -36,7 +35,7 @@ SCALERS_PATH = "scalers/scalers.pkl"
 TECHNICAL_SCALERS_PATH = "scalers/technical_scalers.pkl"
 TARGET_COLUMN = "close"
 SORT_COLUMNS = ["date_year", "date_month", "date_day_of_month"]
-TIME_SERIES_LENGTH = 5 #30 #5 #3 #10 #20
+TIME_SERIES_LENGTH = 5
 MAX_TARGET_HORIZON = 5
 DATA_OUTPUT_DIRECTORY = "datasets"
 DATA_WITH_DATE_OUTPUT_DIRECTORY = "datasets_date"
@@ -195,7 +194,6 @@ def add_hurst_dim_columns(df, group_by_column, width=100):
     df["hurst_exponent"] = np.concatenate([_apply_hurst_function(group, width) for _, group in df.groupby(group_by_column)])
     return df
 
-# TODO
 def add_arima_prediction(df, group_by_column, width=SCHEMA_WIDTH):
     def _apply_arima(df, width):
         n = len(df)
@@ -214,8 +212,6 @@ def add_arima_prediction(df, group_by_column, width=SCHEMA_WIDTH):
     df["arima"] = np.concatenate([_apply_arima(group, width) for _, group in df.groupby(group_by_column)])
     return df
         
-###
-
 def add_fractal_long_schemas(df, path, group_by_column, prefix, width):
     """
     wykrywa schematy fraktalne o zmiennej długości w ramcę danych,
@@ -365,13 +361,10 @@ def load_object(path):
         return obj
 
 def inverse_target_scaling(data, name, scalers):
-    # name = "AAPL"
     columns_to_standardize = ["adjusted_close", "close", "high", "low", "open", "volume"]
     
     data_scaled = data[data[f'name_{name}'] == 1][columns_to_standardize]
     data_original = scalers[name].inverse_transform(data_scaled)
-    # close_original = data_original[:, 1]
-    # return close_original
     return data_original
 
 def create_time_series(data, columns, group_by_column, target_column, sort_columns, n, k=1):
@@ -467,7 +460,6 @@ def pipeline():
     df_val.volume = df_val.volume.astype(float)
     df_test.volume = df_test.volume.astype(float)
     
-    # TODO hurst exponent
     print("Wyliczanie wykładnika Hursta")
     df_train = add_hurst_dim_columns(df_train, GROUP_BY_COLUMN, HURST_WIDTH)
     df_val = add_hurst_dim_columns(df_val, GROUP_BY_COLUMN, HURST_WIDTH)
@@ -481,18 +473,15 @@ def pipeline():
     print("Zapisywanie obiektów skalujących")
     save_object(scalers, SCALERS_PATH)
     
-    # TODO add arima
     print("Wykorzystanie ARIMA")
     df_train = add_arima_prediction(df_train, GROUP_BY_COLUMN, width=SCHEMA_WIDTH)
     df_val = add_arima_prediction(df_val, GROUP_BY_COLUMN, width=SCHEMA_WIDTH)
     df_test = add_arima_prediction(df_test, GROUP_BY_COLUMN, width=SCHEMA_WIDTH)
     
-    # TODO technical analysis indicators
     print("Dodawanie wskaźników analizy techniczej")
     df_train = add_technical_analysis_columns(df_train, GROUP_BY_COLUMN, prefix=TECHNICAL_ANALYSIS_PREFIX)
     df_val = add_technical_analysis_columns(df_val, GROUP_BY_COLUMN, prefix=TECHNICAL_ANALYSIS_PREFIX)
     df_test = add_technical_analysis_columns(df_test, GROUP_BY_COLUMN, prefix=TECHNICAL_ANALYSIS_PREFIX)
-    # TODO scaling
     print("Standaryzacja kolumn analizy technicznej")
     technical_analysis_columns = [col for col in df_train.columns if col.startswith(TECHNICAL_ANALYSIS_PREFIX)]
     df_train, technical_analysis_scalers = standardize_training_columns(df_train, technical_analysis_columns, GROUP_BY_COLUMN)
@@ -540,7 +529,6 @@ def pipeline():
     val_sets, y_val_sets = get_target_columns(val_sets, MAX_TARGET_HORIZON)
     test_sets, y_test_sets = get_target_columns(test_sets, MAX_TARGET_HORIZON)
     
-    # TODO remove year columns
     year_columns = ["date_year"] + [f"date_year_{i}" for i in range(1, TIME_SERIES_LENGTH)]
     columns_to_drop = ["name"] + year_columns
     

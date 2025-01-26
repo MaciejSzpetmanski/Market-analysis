@@ -1,20 +1,15 @@
-#%% working directory
+#%% packages
 
 import os
-import joblib
-
-path = "D:\Studia\semestr7\inźynierka\Market-analysis"
-# path = "C:\Studia\Market-analysis"
-os.chdir(path)
-
-#%%
-
 import numpy as np
 import pandas as pd
-import yfinance as yf
 import matplotlib.pyplot as plt
 from statsmodels.tsa.arima.model import ARIMA
 from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import mean_squared_error
+from pmdarima import auto_arima
+import warnings
+
 
 #%% categorize y
 
@@ -35,9 +30,6 @@ def y_to_increments(x, y, pred_name="close"):
     return res
 
 #%% reading data (y as returns)
-
-import pandas as pd
-import numpy as np
 
 def load_dataset(directory_name, name, target_horizon):
     df_file_path = os.path.join(directory_name, f"df_{name}_{target_horizon}.csv")
@@ -79,8 +71,6 @@ data_x_test, data_y_test = split_data(df_test, y_test, name_columns)
 
 #%% evaluation
 
-from sklearn.metrics import mean_squared_error, r2_score
-
 def count_acc(model, x, y):
     y_pred = model.predict(x)
     
@@ -111,8 +101,6 @@ def count_acc_pred(y_pred, y):
 
 #%% plot prediction
 
-import matplotlib.pyplot as plt
-
 def plot_prediction(models, x_set, y_set, names):
     for name in names:
         model = models[name]
@@ -142,12 +130,7 @@ def make_plot(y, pred):
 
 #%%
 
-from pmdarima import auto_arima
-import warnings
-
 name = "AAPL"
-# train = data_x_train[name]["close"]
-# val = data_x_val[name]["close"]
 test = data_x_test[name]["close"]
 
 forecast = []
@@ -155,9 +138,6 @@ width = 20
 y_test = data_x_test[name]["close"][width:-1]
 for i in range(0, len(test)-width-1):
     x = test[i:i+width]
-    
-    # model = ARIMA(x, order=(10, 1, 0))
-    # model_fit = model.fit()
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         auto_model = auto_arima(x, seasonal=False, stepwise=True, trace=False)
@@ -168,14 +148,14 @@ for i in range(0, len(test)-width-1):
     forecast.append(pred)
 
 mae = mean_absolute_error(y_test, forecast)
-print(f"Mean Absolute Error: {mae}")
+print(f"MAE: {mae}")
 
-# Plot the results
+# plot results
 plt.figure(figsize=(10,5))
 plt.plot(y_test, label="Actual Prices", color='green')
 plt.plot(y_test.index, forecast, label="Predicted Prices", color='red')
 plt.legend()
-plt.title("ARIMA Stock Price Prediction")
+plt.title("ARIMA stock price prediction")
 plt.show()
 
 len(forecast)
@@ -184,14 +164,9 @@ x_prev = data_x_test[name]["close"][width-1:-2]
 y_inc = (y_test.reset_index(drop=True) - x_prev.reset_index(drop=True)) / x_prev.reset_index(drop=True)
 pred_inc = (np.array(forecast).reshape(-1) - x_prev.reset_index(drop=True)) / x_prev.reset_index(drop=True)
 mae = mean_absolute_error(y_inc, pred_inc)
-print(f"Mean Absolute Error on returns: {mae}")
+print(f"MAE on returns: {mae}")
 
 count_acc_pred(pred_inc, y_inc)
-
-
-len(pred_inc[pred_inc > 0])
-len(pred_inc[pred_inc == 0])
-len(pred_inc[pred_inc < 0])
 
 #%%
 
@@ -215,30 +190,27 @@ for name in names:
         forecast.append(pred)
     
     mae = mean_absolute_error(y_test, forecast)
-    print(f"Mean Absolute Error: {mae}")
+    print(f"MAE: {mae}")
     
     make_plot(y_test, forecast)
     
-    # Plot the results
     plt.figure(figsize=(10,5))
     plt.plot(y_test, label="Actual Prices", color='green')
     plt.plot(y_test.index, forecast, label="Predicted Prices", color='red')
     plt.legend()
-    plt.title("ARIMA Stock Price Prediction")
+    plt.title("ARIMA stock price prediction")
     plt.show()
 
     x_prev = data_x_test[name]["close"][width-1:-2]
     y_inc = (y_test.reset_index(drop=True) - x_prev.reset_index(drop=True)) / x_prev.reset_index(drop=True)
     pred_inc = (np.array(forecast).reshape(-1) - x_prev.reset_index(drop=True)) / x_prev.reset_index(drop=True)
     mae = mean_absolute_error(y_inc, pred_inc)
-    print(f"Mean Absolute Error on returns: {mae}")
+    print(f"MAE on returns: {mae}")
 
     acc = count_acc_pred(pred_inc, y_inc)
     print(f"Accuracy: {acc}")
     accuracy.append(acc)
     print()
 
-
 print(f"Total accuracy: {np.mean(accuracy)}")
-# 0.5070486591590601
 

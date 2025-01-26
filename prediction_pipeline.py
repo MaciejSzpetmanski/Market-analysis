@@ -19,7 +19,6 @@ def fetch_data(name, n_days):
     start_date = end_date - timedelta(days=extended_days)
     data = yf.download(name, start=start_date, end=end_date, interval='1d')
     data = data.tail(n_days)
-    # TODO raise an error when there is not enough data
     return data
 
 #%%
@@ -34,10 +33,6 @@ def create_time_series_vector(data, columns, n):
     res_data = res_data.head(-(n-1))
     last_row = res_data.tail(1).reset_index(drop=True)
     return last_row
-
-# TODO check weekend, free days
-def validate_y_date(date, name):
-    pass
 
 def create_date_vector(date):
     df_date = pd.DataFrame()
@@ -75,7 +70,6 @@ def prepare_data_for_prediction(df, name, use_arima=True):
         raise Exception(f"Not enough data. {dp.TIME_SERIES_LENGTH} required.")
     df = df.tail(dp.TIME_SERIES_LENGTH + dp.SCHEMA_WIDTH - 1).reset_index(drop=True)
     
-    # TODO
     print("Wyliczanie wykładnika Hursta")
     df = dp.add_hurst_dim_columns(df, dp.GROUP_BY_COLUMN, dp.HURST_WIDTH)
     
@@ -84,21 +78,16 @@ def prepare_data_for_prediction(df, name, use_arima=True):
     df.volume = df.volume.astype(float)
     df = dp.standardize_columns(df, scalers, dp.COLUMNS_TO_STANDARDIZE, dp.GROUP_BY_COLUMN)
     
-    # TODO add arima
     if use_arima:
         print("Wykorzystanie ARIMA")
         df = dp.add_arima_prediction(df, dp.GROUP_BY_COLUMN, width=dp.SCHEMA_WIDTH)
     
-    # TODO technical analysis indicators
     print("Dodawanie wskaźników analizy techniczej")
     df = dp.add_technical_analysis_columns(df, dp.GROUP_BY_COLUMN, prefix=dp.TECHNICAL_ANALYSIS_PREFIX)
-    # TODO scaling
     print("Standaryzacja kolumn analizy technicznej")
     technical_analysis_columns = [col for col in df.columns if col.startswith(dp.TECHNICAL_ANALYSIS_PREFIX)]
     technical_analysis_scalers = dp.load_object(dp.TECHNICAL_SCALERS_PATH)
     df = dp.standardize_columns(df, technical_analysis_scalers, technical_analysis_columns, dp.GROUP_BY_COLUMN)
-    
-    
     
     print("Dodawanie cech fraktalnych o zmiennej długości")
     df = dp.add_fractal_long_schemas(df, dp.LONG_SCHEMA_PATH, dp.GROUP_BY_COLUMN, dp.LONG_SCHEMA_PREFIX, dp.SCHEMA_WIDTH)
@@ -121,7 +110,6 @@ def prepare_data_for_prediction(df, name, use_arima=True):
     columns_to_shift = [col for col in df.columns if not col.startswith("name")]
     output_vector = create_time_series_vector(df, columns_to_shift, dp.TIME_SERIES_LENGTH)
     
-    # TODO remove year columns
     year_columns = ["date_year"] + [f"date_year_{i}" for i in range(1, dp.TIME_SERIES_LENGTH)]
     columns_to_drop = ["name"] + year_columns
     print("Usuwanie kolumny z nazwą")
@@ -141,7 +129,6 @@ def download_and_prepare_data(name):
     df = df.reset_index(drop=False)
     df.columns = [c[0] for c in df.columns]
     df.columns = df.columns.str.lower()
-    # TODO change to actual value
     df["adjusted_close"] = df["close"]
     df = prepare_data_for_prediction(df, name)
     
@@ -189,7 +176,6 @@ def prepare_data_for_arima(df, name, pred_name="close"):
     dp.validate_data(df)
     df = dp.convert_column_types(df)
     df = df.sort_values(by=["date"])
-    # df = df.tail(20).reset_index(drop=True)
     df = df.reset_index(drop=True)
     x = df[pred_name]
     return x
@@ -265,12 +251,6 @@ def load_models():
     
     class TransformerContainer:
         def __init__(self, input_dim, d_model, nhead, num_layers, dim_feedforward, model_path):
-            # self.model = TransformerModel(input_dim=input_dim, d_model=d_model, nhead=nhead,
-            #                               num_layers=num_layers, dim_feedforward=dim_feedforward)
-            # self.model.load_state_dict(torch.load(model_path))
-            # self.model.eval()
-            
-            
             self.model = TransformerModel(input_dim=465, d_model=64, nhead=8, num_layers=4, dim_feedforward=128)
             self.model.load_state_dict(torch.load(model_path))
             self.model.eval()
@@ -373,10 +353,7 @@ def test():
     
     date = "2024-09-30" # example
     df = dp.load_data_from_file(path)
-    # x = prepare_data_for_prediction(df, name)
     x = prepare_data(models, are_on_close, df, name, date, use_arima=True)
-    # x = merge_vector_with_pred_date(x, date)
-    # y1 = predict_value_old(x, name, pred_name="close")
     predicted_value = predict_value(models, are_on_close, x, name)[-1]
     print(predicted_value)
     

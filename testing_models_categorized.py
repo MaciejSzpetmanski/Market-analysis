@@ -1,11 +1,8 @@
-#%% working directory
+#%% packages
 
 import os
-import joblib
-
-path = "D:\Studia\semestr7\inźynierka\Market-analysis"
-path = "C:\Studia\Market-analysis"
-os.chdir(path)
+import pandas as pd
+from sklearn.metrics import mean_squared_error, r2_score, accuracy_score, confusion_matrix
 
 #%% categorize y
 
@@ -18,9 +15,6 @@ def categorize_y(x, y, pred_name="close"):
     return res
 
 #%% reading data (categorized y)
-
-import pandas as pd
-import numpy as np
 
 def load_dataset(directory_name, name, target_horizon):
     df_file_path = os.path.join(directory_name, f"df_{name}_{target_horizon}.csv")
@@ -41,8 +35,6 @@ y_val = categorize_y(df_val, y_val.y)
 y_test = categorize_y(df_test, y_test.y)
 
 #%% evaluation
-
-from sklearn.metrics import mean_squared_error, r2_score, accuracy_score, confusion_matrix
 
 def evaluate_model_on_cat(model, x, y):
     y_pred = model.predict(x)
@@ -116,7 +108,6 @@ plot_cat(model, df_test, y_test)
 
 from sklearn.metrics import accuracy_score, confusion_matrix
 from joblib import Parallel, delayed
-import threading
 
 penalties = ['l1', 'l2', 'elasticnet', None]
 C_values = [0.1, 1, 10, 100]
@@ -129,21 +120,19 @@ def train_and_evaluate(penalty, C, solver):
         model.fit(df_train, y_train)
         val_pred = model.predict(df_val)
         val_accuracy = accuracy_score(y_val, val_pred)
-        print(f"Penalty: {penalty}, C: {C}, Solver: {solver}, Val Accuracy: {val_accuracy}")
+        print(f"Penalty: {penalty}, C: {C}, solver: {solver}, val accuracy: {val_accuracy}")
         return (val_accuracy, {'penalty': penalty, 'C': C, 'solver': solver}, model)
     except Exception as e:
-        print(f"Skipping combination Penalty: {penalty}, C: {C}, Solver: {solver} due to error: {e}")
+        print(f"Skipping penalty: {penalty}, C: {C}, solver: {solver} due to error: {e}")
         return (0, None, None)
 
-# Parallelize hyperparameter search
 results = Parallel(n_jobs=-1)(delayed(train_and_evaluate)(penalty, C, solver) for penalty in penalties for C in C_values for solver in solvers)
 
-# Select the best result
+# select the best result
 best_result = max(results, key=lambda x: x[0])
 best_accuracy, best_params, best_model = best_result
 
 print("Best Parameters:", best_params)
-# {Penalty: l1, C: 0.1, Solver: liblinear, Val Accuracy: 0.5581881533101045}
 
 #%% tuned LogisticRegression
 
@@ -192,15 +181,14 @@ for n_estimators in n_estimators_list:
         val_preds = rf.predict(df_val)
         val_preds = categorize_pred(val_preds)
         score = accuracy_score(y_val, val_preds)
-        print(f"n_estimators: {n_estimators}, max_depth: {max_depth}, Acc: {score}")
+        print(f"n_estimators: {n_estimators}, max_depth: {max_depth}, acc: {score}")
         print()
         if score > best_score:
             best_score = score
             best_params = {"n_estimators": n_estimators, "max_depth": max_depth}
             best_model = rf
 
-print(f"\nBest Params: {best_params}, Best Validation Acc: {best_score}")
-# Best Params: {'n_estimators': 300, 'max_depth': 10}, Best Validation MSE: 0.5101045296167247
+print(f"\nBest params: {best_params}, best val acc: {best_score}")
 
 #%% tuned RandomForestRegressor
 
@@ -274,8 +262,6 @@ for n_estimators in [100, 200, 300]:
 
 print(f"\nBest Params: {best_params}")
 print(f"Best Validation MSE: {best_score}")
-# Best Params: {'n_estimators': 100, 'max_depth': 7, 'learning_rate': 0.2, 'alpha': 0.1, 'gamma': 0.1}
-# Best Validation MSE: 0.5156794425087108
 
 #%% tuned xgboost
 
@@ -358,8 +344,6 @@ for n_estimators in [50, 100, 200]:
 
 print(f"\nBest Params: {best_params}")
 print(f"Best Validation Custom Score: {best_score}")
-# Best Params: {'n_estimators': 100, 'max_samples': 0.7, 'max_features': 0.5}
-# Best Validation Custom Score: 0.5139372822299652
 
 #%% tuned bagging
 

@@ -1,21 +1,22 @@
-#%% working directory
+#%% packages
 
 import os
-import joblib
-
-path = "D:\Studia\semestr7\inźynierka\Market-analysis"
-# path = "C:\Studia\Market-analysis"
-os.chdir(path)
+import pandas as pd
+from sklearn.metrics import mean_squared_error
+import matplotlib.pyplot as plt
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader, TensorDataset
 
 #%% categorize y
 
-def categorize_y(x, y, pred_name="close"):
-    last_column_name = [col for col in x.columns if col.startswith(pred_name)][-1]
-    last_data = x[last_column_name]
-    res = y - last_data
-    res[res >= 0] = 1
-    res[res < 0] = 0
-    return res
+# def categorize_y(x, y, pred_name="close"):
+#     last_column_name = [col for col in x.columns if col.startswith(pred_name)][-1]
+#     last_data = x[last_column_name]
+#     res = y - last_data
+#     res[res >= 0] = 1
+#     res[res < 0] = 0
+#     return res
 
 #%%  y to increments
 
@@ -32,9 +33,6 @@ def categorize_y(x, y, pred_name="close"):
     return y
 
 #%% reading data (y as returns)
-
-import pandas as pd
-import numpy as np
 
 def load_dataset(directory_name, name, target_horizon):
     df_file_path = os.path.join(directory_name, f"df_{name}_{target_horizon}.csv")
@@ -55,8 +53,6 @@ y_val = categorize_y(df_val, y_val.y)
 y_test = categorize_y(df_test, y_test.y)
 
 #%% evaluation
-
-from sklearn.metrics import mean_squared_error, r2_score
 
 def count_acc(model, x, y):
     y_pred = model(x).detach().numpy()
@@ -83,8 +79,6 @@ def evaluate_model_acc(model, x, y, x_set):
 
 #%% plot prediction
 
-import matplotlib.pyplot as plt
-
 def plot_prediction(model, x, y, x_set):
     y_pred = model(x).detach().numpy()
     y_pred[y_pred >= 0.5] = 1
@@ -108,10 +102,6 @@ def plot_prediction(model, x, y, x_set):
         plt.show()
         
 #%% model
-
-import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader, TensorDataset
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
@@ -213,15 +203,16 @@ for epoch in range(EPOCHS):
 
     val_loss /= len(val_loader)
 
-    print(f"Epoch {epoch+1}/{EPOCHS} - Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
+    print(f"Epoch {epoch+1}/{EPOCHS} - train Loss: {train_loss}, val Loss: {val_loss}")
 
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         torch.save(model.state_dict(), save_path)
-        print(f"Model saved at epoch {epoch+1} with val loss: {val_loss:.4f}")
+        print(f"Model saved at epoch {epoch+1} with val loss: {val_loss}")
     
 #%%
 
+save_path = "models/transformers/best_model_cat.pth"
 model = TransformerModel(input_dim=len(df_train.columns), d_model=64, nhead=8, num_layers=4, dim_feedforward=128)
 model.load_state_dict(torch.load(save_path))
 model.eval()
