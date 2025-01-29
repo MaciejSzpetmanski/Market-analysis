@@ -978,6 +978,8 @@ model = load_model("models/nn.keras")
 
 y_pred = model.predict(df_test)
 
+plot_prediction_by_names(model, x_test_list, y_test_list)
+
 ### cat
 
 y_cat = categorize_y(df_test, y_test.y)
